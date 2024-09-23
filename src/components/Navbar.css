@@ -1,0 +1,35 @@
+/* src/components/Navbar.css */
+.navbar-header {
+  background-color: #007bff; /* Dark background similar to Home */
+  padding: 20px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo-placeholder {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.navbar button {
+  background: none; /* Remove button background */
+  border: none; /* Remove button border */
+  color: white; /* Set text color to white */
+  margin: 0 15px; /* Same margin as links */
+  text-decoration: none; /* Remove underline */
+  font-weight: bold; /* Bold text */
+  cursor: pointer; /* Pointer cursor on hover */
+  font-size: 16px; /* Consistent font size */
+}
+
+.navbar button:hover {
+  text-decoration: underline; /* Add underline on hover */
+  color: white;
+  background-color: #007bff;
+}
+
+.navbar button:focus {
+  outline: none; /* Remove focus outline */
+}

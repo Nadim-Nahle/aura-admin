@@ -1,0 +1,79 @@
+/* src/SignIn.css */
+.sign-in-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #007bff, #6f7272);
+  padding: 20px;
+}
+
+.sign-in-form-container {
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  width: 350px;
+  text-align: center;
+}
+
+.sign-in-form-container h2 {
+  margin-bottom: 30px;
+  font-size: 26px;
+  color: #333333;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.sign-in-form-container label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #666666;
+  text-align: left;
+}
+
+.sign-in-form-container input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  transition: border-color 0.3s;
+}
+
+.sign-in-form-container input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+.sign-in-form-container button {
+  background-color: #007bff;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.sign-in-form-container button:hover {
+  background-color: #0056b3;
+}
+
+.sign-in-form-container button:active {
+  background-color: #004085;
+}
+
+.sign-in-form-container button:focus {
+  outline: none;
+}
+
+.error-message {
+  color: red;
+  margin-bottom: 15px;
+}

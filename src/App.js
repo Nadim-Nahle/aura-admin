@@ -9,14 +9,7 @@ import ProtectedRoute from './contexts/ProtectedRoute';
 
 const App = () => {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/" element={<ProtectedRoute element={<Home />} />} />
-        <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-        <Route path="/packages" element={<ProtectedRoute element={<PackagePage />} />} />
-      </Routes>
-    </AuthProvider>
+    <h1>website under maintainance</h1>
   );
 };
 

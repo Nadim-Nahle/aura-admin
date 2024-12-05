@@ -4,6 +4,8 @@ import Modal from "../../components/Modal"; // Import the Modal component
 import Navbar from "../../components/Navbar";
 import axios from "axios"; // Import Axios
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import Firebase Storage
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css"; // Import DatePicker CSS
 
 const Dashboard = () => {
   const [users, setUsers] = useState([]);
@@ -11,6 +13,7 @@ const Dashboard = () => {
   const [feedbackMessage, setFeedbackMessage] = useState(""); // Feedback message
 
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control the delete modal
+  const [userIdToDelete, setUserIdToDelete] = useState(null);
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false); // For the Add/Edit modal
   const [currentUserId, setCurrentUserId] = useState(null); // ID of the user being edited or deleted
   const [newUser, setNewUser] = useState({
@@ -20,8 +23,8 @@ const Dashboard = () => {
     phoneNumber: "",
     role: "user",
     membership: "regular",
-    startDate: "regular",
-    endDate: "regular",
+    startDate: new Date(),
+    endDate: new Date(),
     barcodeFile: null,
   }); // New/Edit user fields
 
@@ -55,8 +58,8 @@ const Dashboard = () => {
         phoneNumber: user.phoneNumber || "",
         role: user.role || "user",
         membership: user.membership || "regular",
-        startDate: user.startDate || "",
-        endDate: user.endDate || "",
+        startDate: user.startDate || new Date(),
+        endDate: user.endDate || new Date(),
         barcodeFile: null, // Barcode update is optional
       });
       setCurrentUserId(user.id);
@@ -68,13 +71,44 @@ const Dashboard = () => {
         phoneNumber: "",
         role: "user",
         membership: "regular",
-        startDate: "",
-        endDate: "",
+        startDate: new Date(),
+        endDate: new Date(),
         barcodeFile: null,
       });
       setCurrentUserId(null);
     }
     setIsAddEditModalOpen(true);
+  };
+
+  const openDeleteModal = (userId) => {
+    setUserIdToDelete(userId); // Set the user ID to be deleted
+    setIsModalOpen(true); // Open the modal
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${api}${userIdToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'auth-api': authApiToken,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete the user');
+      }
+
+      setUsers(users.filter(user => user.id !== userIdToDelete)); // Remove user
+      setFeedbackMessage('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setFeedbackMessage('Error deleting user');
+    } finally {
+      setLoading(false);
+      setIsModalOpen(false); // Close the modal
+    }
   };
 
   const handleAddEditUser = async () => {
@@ -108,10 +142,9 @@ const Dashboard = () => {
         const response = await axios.put(`${api}${currentUserId}`, userData, {
           headers: { "auth-api": authApiToken },
         });
-        console.log("aaa",response.data.user)
         setUsers((prev) =>
           prev.map((user) =>
-            user.id === currentUserId ? { ...user, name: response.data.user.displayName, ...response.data.user } : user
+            user.id === currentUserId ? { ...user, ...response.data.user } : user
           )
         );
         setFeedbackMessage("User updated successfully");
@@ -125,7 +158,7 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Error adding/editing user:", error);
-      setFeedbackMessage( error?.response?.data?.message[0]);
+      setFeedbackMessage(error?.response?.data?.message[0]);
     } finally {
       setLoading(false);
       setIsAddEditModalOpen(false);
@@ -173,20 +206,48 @@ const Dashboard = () => {
                 <td>{user.name}</td>
                 <td>{user.email}</td>
                 <td>{user.role}</td>
-                <td>{user.startDate}</td>
-                <td>{user.endDate}</td>
-                <td>{user.barcode == "none" ? <img src={"https://www.freeiconspng.com/thumbs/x-png/x-png-33.png"} style={{ width: 50, height: 50 }} /> : <img src={user.barcode} style={{ width: 50, height: 50 }} />}</td>
+                <td>{new Date(user.startDate).toLocaleDateString("en-GB")}</td>
+                <td>{new Date(user.endDate).toLocaleDateString("en-GB")}</td>
+                <td>
+                  {user.barcode === "none" ? (
+                    <img
+                      src={"https://www.freeiconspng.com/thumbs/x-png/x-png-33.png"}
+                      style={{ width: 50, height: 50 }}
+                    />
+                  ) : (
+                    <img src={user.barcode} style={{ width: 50, height: 50 }} />
+                  )}
+                </td>
                 <td>{user.membership}</td>
-                <td>{user.profilePicture == "1" ? <img src={"https://www.freeiconspng.com/thumbs/x-png/x-png-33.png"} style={{ width: 50, height: 50 }} /> : <img src={user.profilePicture} style={{ width: 50, height: 50 }} />}</td>
+                <td>
+                  {user.profilePicture === "1" ? (
+                    <img
+                      src={"https://www.freeiconspng.com/thumbs/x-png/x-png-33.png"}
+                      style={{ width: 50, height: 50 }}
+                    />
+                  ) : (
+                    <img src={user.profilePicture} style={{ width: 50, height: 50 }} />
+                  )}
+                </td>
                 <td>
                   <button onClick={() => openAddEditModal(user)}>Edit</button>
-                  <button onClick={() => setIsModalOpen(true)}>Delete</button>
+                  <button onClick={() => openDeleteModal(user.id)}>Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-
+        {isModalOpen && (
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)} // Close the modal
+            onConfirm={handleDelete} // Trigger the delete action
+            title="Confirm Delete"
+            message="Are you sure you want to delete this user?"
+            confirmText="Delete"
+            cancelText="Cancel"
+          />
+        )}
         <Modal
           isOpen={isAddEditModalOpen}
           onClose={() => setIsAddEditModalOpen(false)}
@@ -194,72 +255,106 @@ const Dashboard = () => {
           title={currentUserId ? "Edit User" : "Add User"}
           message={
             <>
-              <input
-                type="text"
-                name="name"
-                placeholder="Name"
-                value={newUser.name}
-                onChange={handleInputChange}
-              />
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={newUser.email}
-                onChange={handleInputChange}
-              />
-              {!currentUserId && (
+              <div className="form-group">
+                <label className="gow-label" htmlFor="name">Name</label>
                 <input
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  value={newUser.password}
+                  type="text"
+                  id="name"
+                  name="name"
+                  placeholder="Name"
+                  value={newUser.name}
                   onChange={handleInputChange}
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="gow-label" htmlFor="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="Email"
+                  value={newUser.email}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              {!currentUserId && (
+                <div className="form-group">
+                  <label className="gow-label" htmlFor="password">Password</label>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Password"
+                    value={newUser.password}
+                    onChange={handleInputChange}
+                  />
+                </div>
               )}
-              <input
-                type="text"
-                name="phoneNumber"
-                placeholder="Phone Number"
-                value={newUser.phoneNumber}
-                onChange={handleInputChange}
-              />
-              <input
-                type="text"
-                name="startDate"
-                placeholder="Sart Date"
-                value={newUser.startDate}
-                onChange={handleInputChange}
-              />
-              <input
-                type="text"
-                name="endDate"
-                placeholder="End Date"
-                value={newUser.endDate}
-                onChange={handleInputChange}
-              />
-              <select name="role" value={newUser.role} onChange={handleInputChange}>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-              <select
-                name="membership"
-                value={newUser.membership}
-                onChange={handleInputChange}
-              >
-                <option value="regular">Regular</option>
-                <option value="student">Student</option>
-              </select>
-              <input
-                type="file"
-                name="barcodeFile"
-                accept="image/*"
-                onChange={handleInputChange}
-              />
+
+              <div className="form-group">
+                <label className="gow-label" htmlFor="phoneNumber">Phone Number</label>
+                <input
+                  type="text"
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  placeholder="Phone Number"
+                  value={newUser.phoneNumber}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="gow-label" htmlFor="startDate">Start Date</label>
+                <DatePicker
+                  selected={newUser.startDate}
+                  onChange={(date) => setNewUser((prev) => ({ ...prev, startDate: date }))}
+                  dateFormat="dd/MM/yyyy"
+                  className="datepicker-wrapper"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="gow-label" htmlFor="endDate">End Date</label>
+                <DatePicker
+                  selected={newUser.endDate}
+                  onChange={(date) => setNewUser((prev) => ({ ...prev, endDate: date }))}
+                  dateFormat="dd/MM/yyyy"
+                  className="datepicker-wrapper"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="gow-label" htmlFor="role">Role</label>
+                <select
+                  name="role"
+                  id="role"
+                  value={newUser.role}
+                  onChange={handleInputChange}
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="gow-label" htmlFor="membership">Membership</label>
+                <select
+                  name="membership"
+                  id="membership"
+                  value={newUser.membership}
+                  onChange={handleInputChange}
+                >
+                  <option value="regular">Regular</option>
+                  <option value="student">Student</option>
+                </select>
+              </div>
             </>
           }
           confirmText={currentUserId ? "Update User" : "Add User"}
         />
+
       </div>
     </>
   );

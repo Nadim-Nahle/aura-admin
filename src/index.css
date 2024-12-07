@@ -11,3 +11,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+.add-expense{
+  margin-left: 10px;
+}
+.expense-form{
+  margin-bottom: 10px;
+}

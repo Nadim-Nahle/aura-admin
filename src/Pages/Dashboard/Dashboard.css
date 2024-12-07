@@ -1,10 +1,63 @@
-/* Dashboard.css */
+/* Dashboard container */
+.dashboard {
+  padding: 20px;
+  background-color: #f4f4f4;
+}
 
-/* Style the Add User Button */
+/* Feedback message */
+.feedback-message {
+  color: green;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+/* Search Input */
+.search-input {
+  width: 300px;
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #7a1315;
+}
+
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #4a4d4d !important;
+  color: white;
+}
+
+td {
+  background-color: #fff;
+}
+
+/* Table row hover effect */
+tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Button styling */
 button {
-  margin-right: 10px;
   padding: 10px 20px;
-  background-color: #3498db;
+  background-color: #7a1315;
   color: white;
   border: none;
   border-radius: 5px;
@@ -14,146 +67,83 @@ button {
 }
 
 button:hover {
-  background-color: #2980b9;
+  background-color: #6f1111;
 }
 
 button:disabled {
-  background-color: #bdc3c7;
+  background-color: #ccc;
   cursor: not-allowed;
 }
 
-/* Modal styling */
 /* Modal styling */
 .modal {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: #fff;
+  background-color: white;
   padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   width: 400px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  z-index: 1010;
-  display: none; /* Initially hidden */
-}
-
-.modal.open {
-  display: block; /* Show modal when open class is applied */
 }
 
 .modal .modal-header {
   font-size: 18px;
-  margin-bottom: 15px;
-}
-
-.modal .modal-content {
   margin-bottom: 20px;
 }
 
-/* Use flexbox for aligning labels and inputs */
-.modal form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px; /* Space between form elements */
+.modal .modal-body {
+  margin-bottom: 20px;
 }
 
-.modal .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px; /* Space between label and input */
+.modal .modal-footer {
+  text-align: right;
 }
 
-.modal label {
-  font-size: 14px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-}
-
-.modal input[type="text"],
-.modal input[type="email"],
-.modal input[type="password"],
-.modal input[type="tel"],
-.modal select {
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  padding: 10px;
-  margin: 0;
-  border-radius: 5px;
-  border: 1px solid #ddd;
-  font-size: 14px;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
 }
 
-.modal input[type="text"]:focus,
-.modal input[type="email"]:focus,
-.modal input[type="password"]:focus,
-.modal input[type="tel"]:focus,
-.modal select:focus {
-  border-color: #3498db;
-}
-
-/* Buttons styling */
-.modal button {
-  background-color: #2ecc71;
-  border-radius: 5px;
-  padding: 10px 20px;
-  color: white;
-  font-size: 14px;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.modal button:hover {
-  background-color: #27ae60;
-}
-
-.modal .cancel-btn {
-  background-color: #e74c3c;
-  margin-left: 10px;
-}
-
-.modal .cancel-btn:hover {
-  background-color: #c0392b;
-}
-
-/* Feedback Message */
-.feedback-message {
-  background-color: #f9f9f9;
-  border: 1px solid #e2e2e2;
-  padding: 10px;
-  margin-bottom: 20px;
-  color: #333;
-  font-weight: bold;
-  border-radius: 5px;
-  max-width: 500px;
-  margin: 10px auto;
-}
-
-/* Spinner */
 .spinner {
-  border: 8px solid #f3f3f3; /* Light grey */
-  border-top: 8px solid #3498db; /* Blue */
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #7a1315;
   border-radius: 50%;
-  width: 60px;
-  height: 60px;
-  animation: spin 1s linear infinite;
-}
-.form-group{
-  margin-bottom: 10px;
-}
-input{
-  margin-left: 10px;
-}
-select{
-  margin-left: 10px;
+  width: 50px;
+  height: 50px;
+  animation: spin 2s linear infinite;
+  margin: 0 auto;
+  margin-top: 100px;
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Search container */
+.search-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Space for adding new user button */
+.search-container button {
+  padding: 10px 15px;
+  background-color: #0d1bb8;
+  font-size: 16px;
+  margin-left: 10px;
+  border-radius: 5px; 
+}
+
+.search-container button:hover {
+  background-color: #218838;
 }

@@ -22,13 +22,16 @@ const Dashboard = () => {
     password: "",
     phoneNumber: "",
     role: "user",
-    membership: "regular",
+    membership: "none",
+    privateSessions: "none",
     startDate: new Date(),
     endDate: new Date(),
     barcodeFile: null,
   }); // New/Edit user fields
+  const oneMonthFromNow = new Date();
+  oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
 
-  const authApiToken = "f80db53c-2ca4-4e38-a0d3-588a69bc7281"; // Replace this with your actual auth token
+  const authApiToken = "f80db53c-2ca4-4e38-a0d3-588a69bc7281"; 
   const api = "https://us-central1-aura-9c98c.cloudfunctions.net/api/users/";
 
   useEffect(() => {
@@ -38,7 +41,12 @@ const Dashboard = () => {
         const response = await axios.get(api, {
           headers: { "auth-api": authApiToken },
         });
-        setUsers(response.data);
+        const processedUsers = response.data.map((user) => ({
+          ...user,
+          startDate: user.startDate === "none" ? new Date() : new Date(user.startDate),
+          endDate: user.endDate === "none" ? oneMonthFromNow : new Date(user.endDate),
+        }));
+        setUsers(processedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {
@@ -50,6 +58,8 @@ const Dashboard = () => {
   }, []);
 
   const openAddEditModal = (user = null) => {
+    const oneMonthFromNow = new Date();
+    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
     if (user) {
       setNewUser({
         name: user.name || "",
@@ -57,9 +67,10 @@ const Dashboard = () => {
         password: "", // Password reset handled separately
         phoneNumber: user.phoneNumber || "",
         role: user.role || "user",
-        membership: user.membership || "regular",
-        startDate: user.startDate || new Date(),
-        endDate: user.endDate || new Date(),
+        membership: user.membership || "none",
+        privateSessions: user.privateSessions || "none",
+        startDate: user.startDate === "none" ? new Date() : new Date(user.startDate),
+        endDate: user.endDate === "none" ? oneMonthFromNow : new Date(user.endDate),
         barcodeFile: null, // Barcode update is optional
       });
       setCurrentUserId(user.id);
@@ -70,14 +81,44 @@ const Dashboard = () => {
         password: "",
         phoneNumber: "",
         role: "user",
-        membership: "regular",
+        membership: "none",
+        privateSessions: "none",
         startDate: new Date(),
-        endDate: new Date(),
+        endDate: oneMonthFromNow,
         barcodeFile: null,
       });
       setCurrentUserId(null);
     }
     setIsAddEditModalOpen(true);
+  };
+
+  const updateMemberships = async () => {
+    try {
+      // Show a loading state or message if needed
+      console.log('Updating expired memberships...');
+  
+      // Make the POST request to the API
+      const response = await fetch('https://us-central1-aura-9c98c.cloudfunctions.net/api/update-expired-memberships', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // Make sure the server knows you're sending JSON
+          'auth-api': 'f80db53c-2ca4-4e38-a0d3-588a69bc7281', // Add the auth-api header here
+        },
+        body: JSON.stringify({}), // Add any necessary payload here (empty object for now)
+      });
+  
+      // Check if the response is okay (status 200-299)
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Response data:', data); // Handle success, maybe show a success message
+      } else {
+        console.error('Failed to update expired memberships:', response.statusText);
+        // Handle failure, maybe show an error message
+      }
+    } catch (error) {
+      console.error('Error during update:', error);
+      // Handle network or other errors
+    }
   };
 
   const openDeleteModal = (userId) => {
@@ -131,9 +172,10 @@ const Dashboard = () => {
         phoneNumber: newUser.phoneNumber,
         role: newUser.role,
         membership: newUser.membership,
+        privateSessions: newUser.privateSessions,
         startDate: newUser.startDate,
         endDate: newUser.endDate,
-        membership: newUser.membership,
+        privateSessions: newUser.privateSessions,
         barcode: barcodeDownloadURL || undefined,
       };
 
@@ -185,6 +227,7 @@ const Dashboard = () => {
         {feedbackMessage && <div className="feedback-message">{feedbackMessage}</div>}
 
         <button onClick={() => openAddEditModal()}>Add User</button>
+        <button onClick={() => updateMemberships()}>Update Memberships</button>
 
         <table>
           <thead>
@@ -196,6 +239,7 @@ const Dashboard = () => {
               <th>End Date</th>
               <th>Qr Code</th>
               <th>Membership</th>
+              <th>Private</th>
               <th>Picture</th>
               <th>Actions</th>
             </tr>
@@ -218,7 +262,14 @@ const Dashboard = () => {
                     <img src={user.barcode} style={{ width: 50, height: 50 }} />
                   )}
                 </td>
-                <td>{user.membership}</td>
+                <td style={{
+                    backgroundColor:
+                      user.membership === "student" || user.membership === "regular"
+                        ? "green"
+                        : "red",
+                    color: user.membership === "student" || user.membership === "regular" ? "white" : "inherit",
+                  }}>{user.membership}</td>
+                <td>{user.privateSessions}</td>
                 <td>
                   {user.profilePicture === "1" ? (
                     <img
@@ -335,6 +386,7 @@ const Dashboard = () => {
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
+                  <option value="freelance">Freelance</option>
                 </select>
               </div>
 
@@ -346,9 +398,38 @@ const Dashboard = () => {
                   value={newUser.membership}
                   onChange={handleInputChange}
                 >
+                  <option value="none">none</option>
                   <option value="regular">Regular</option>
                   <option value="student">Student</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label className="gow-label" htmlFor="privateSessions">Private</label>
+                <select
+                  name="privateSessions"
+                  id="privateSessions"
+                  value={newUser.privateSessions}
+                  onChange={handleInputChange}
+                >
+                  <option value="0">None</option>
+                  <option value="1">1 Session</option>
+                  <option value="12">12 Sessions</option>
+                  <option value="16">16 Sessions</option>
+                  <option value="20">20 Sessions</option>
+                </select>
+              </div>
+
+              {/* Barcode upload section */}
+              <div className="form-group">
+                <label className="gow-label" htmlFor="barcodeFile">Barcode</label>
+                <input
+                  type="file"
+                  id="barcodeFile"
+                  name="barcodeFile"
+                  accept="image/*"
+                  onChange={handleInputChange}
+                />
               </div>
             </>
           }

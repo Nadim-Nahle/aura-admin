@@ -18,7 +18,7 @@ const Home = () => {
       </main>
 
       <footer className="admin-homepage-footer">
-        <p>© 2024 [Your Gym Name]. Admin Panel.</p>
+        <p>© 2024 GrowFitness. Admin Panel.</p>
         <nav className="footer-nav">
           <a href="#support">Support</a>
           <a href="#privacy">Privacy Policy</a>

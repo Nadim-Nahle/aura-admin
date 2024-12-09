@@ -200,7 +200,16 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Error adding/editing user:", error);
+      if(error?.response?.data?.message[0] == "P"){
+        console.log(error.response)
+        setFeedbackMessage("Phone Number already exists")
+      }
+      else if(error?.response?.data?.message == "The email address is already in use by another account."){
+        setFeedbackMessage("email already exists")
+      }
+      else{
       setFeedbackMessage(error?.response?.data?.message[0]);
+      }
     } finally {
       setLoading(false);
       setIsAddEditModalOpen(false);

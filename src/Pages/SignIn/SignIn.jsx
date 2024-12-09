@@ -37,10 +37,10 @@
           if (isAdminUser) {
             setIsAdmin(true);
             setError("You are not authorized to log in.");
-        await signOut(auth); // Ensure the user is signed out
+        // await signOut(auth); // Ensure the user is signed out
           } else {
-            setIsAdmin(false);
-            setUserLoggedIn(false); 
+            setIsAdmin(true);
+            setUserLoggedIn(true); 
           }
         } catch (error) {
           setError(error.message);

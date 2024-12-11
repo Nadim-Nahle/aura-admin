@@ -38,7 +38,7 @@ const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(api, {
+        const response = await axios.get("https://us-central1-aura-9c98c.cloudfunctions.net/api/users/admin/topSecret", {
           headers: { "auth-api": authApiToken },
         });
         const processedUsers = response.data.map((user) => ({

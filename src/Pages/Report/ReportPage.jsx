@@ -9,7 +9,7 @@ const ReportPage = () => {
   const [expenseName, setExpenseName] = useState('');
   const [expensePrice, setExpensePrice] = useState(0);
 
-  const api = "https://us-central1-aura-9c98c.cloudfunctions.net/api/users/";
+  const api = "https://us-central1-aura-9c98c.cloudfunctions.net/api/users/admin/topSecret";
   const expensesApi = "https://us-central1-aura-9c98c.cloudfunctions.net/api/expenses"; // Your expense API
   const authApiToken = "f80db53c-2ca4-4e38-a0d3-588a69bc7281";
 

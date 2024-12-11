@@ -184,9 +184,13 @@ const Dashboard = () => {
         const response = await axios.put(`${api}${currentUserId}`, userData, {
           headers: { "auth-api": authApiToken },
         });
+        const updatedUser = {
+          ...response.data.user,
+          name: response.data.user.displayName, // Map displayName to name
+        };
         setUsers((prev) =>
           prev.map((user) =>
-            user.id === currentUserId ? { ...user, ...response.data.user } : user
+            user.id === currentUserId ? { ...user, ...updatedUser } : user
           )
         );
         setFeedbackMessage("User updated successfully");
@@ -243,6 +247,7 @@ const Dashboard = () => {
             <tr>
               <th>Name</th>
               <th>Email</th>
+              <th>Phone Number</th>
               <th>Role</th>
               <th>Start Date</th>
               <th>End Date</th>
@@ -258,6 +263,7 @@ const Dashboard = () => {
               <tr key={user.id}>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
+                <td>{user.phoneNumber}</td>
                 <td>{user.role}</td>
                 <td>{new Date(user.startDate).toLocaleDateString("en-GB")}</td>
                 <td>{new Date(user.endDate).toLocaleDateString("en-GB")}</td>

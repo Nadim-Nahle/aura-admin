@@ -6,6 +6,7 @@ import axios from "axios"; // Import Axios
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import Firebase Storage
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css"; // Import DatePicker CSS
+import * as XLSX from 'xlsx';
 
 const Dashboard = () => {
   const [users, setUsers] = useState([]);
@@ -31,7 +32,7 @@ const Dashboard = () => {
   const oneMonthFromNow = new Date();
   oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
 
-  const authApiToken = "f80db53c-2ca4-4e38-a0d3-588a69bc7281"; 
+  const authApiToken = "f80db53c-2ca4-4e38-a0d3-588a69bc7281";
   const api = "https://us-central1-aura-9c98c.cloudfunctions.net/api/users/";
 
   useEffect(() => {
@@ -96,7 +97,7 @@ const Dashboard = () => {
     try {
       // Show a loading state or message if needed
       console.log('Updating expired memberships...');
-  
+
       // Make the POST request to the API
       const response = await fetch('https://us-central1-aura-9c98c.cloudfunctions.net/api/update-expired-memberships', {
         method: 'POST',
@@ -106,7 +107,7 @@ const Dashboard = () => {
         },
         body: JSON.stringify({}), // Add any necessary payload here (empty object for now)
       });
-  
+
       // Check if the response is okay (status 200-299)
       if (response.ok) {
         const data = await response.json();
@@ -204,15 +205,15 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Error adding/editing user:", error);
-      if(error?.response?.data?.message[0] == "P"){
+      if (error?.response?.data?.message[0] == "P") {
         console.log(error.response)
         setFeedbackMessage("Phone Number already exists")
       }
-      else if(error?.response?.data?.message == "The email address is already in use by another account."){
+      else if (error?.response?.data?.message == "The email address is already in use by another account.") {
         setFeedbackMessage("email already exists")
       }
-      else{
-      setFeedbackMessage(error?.response?.data?.message[0]);
+      else {
+        setFeedbackMessage(error?.response?.data?.message[0]);
       }
     } finally {
       setLoading(false);
@@ -226,6 +227,35 @@ const Dashboard = () => {
       ...prev,
       [name]: files ? files[0] : value,
     }));
+  };
+  
+  const exportToExcel = () => {
+    if (users.length === 0) {
+      setFeedbackMessage("No data available to export");
+      return;
+    }
+
+    // Transform data for Excel
+    const formattedData = users.map((user) => ({
+      Name: user.name,
+      Email: user.email,
+      "Phone Number": user.phoneNumber,
+      Role: user.role,
+      "Start Date": new Date(user.startDate).toLocaleDateString("en-GB"),
+      "End Date": new Date(user.endDate).toLocaleDateString("en-GB"),
+      Membership: user.membership,
+      "Private Sessions": user.privateSessions,
+    }));
+
+    // Create a new worksheet
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+
+    // Create a new workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+    // Generate Excel file and trigger download
+    XLSX.writeFile(workbook, "UserRecords.xlsx");
   };
 
   return (
@@ -241,6 +271,8 @@ const Dashboard = () => {
 
         <button onClick={() => openAddEditModal()}>Add User</button>
         <button onClick={() => updateMemberships()}>Update Memberships</button>
+        <button onClick={exportToExcel}>Export to Excel</button>
+
 
         <table>
           <thead>
@@ -278,12 +310,12 @@ const Dashboard = () => {
                   )}
                 </td>
                 <td style={{
-                    backgroundColor:
-                      user.membership === "student" || user.membership === "regular"
-                        ? "green"
-                        : "red",
-                    color: user.membership === "student" || user.membership === "regular" ? "white" : "inherit",
-                  }}>{user.membership}</td>
+                  backgroundColor:
+                    user.membership === "student" || user.membership === "regular"
+                      ? "green"
+                      : "red",
+                  color: user.membership === "student" || user.membership === "regular" ? "white" : "inherit",
+                }}>{user.membership}</td>
                 <td>{user.privateSessions}</td>
                 <td>
                   {user.profilePicture === "1" ? (

@@ -14,7 +14,7 @@ const Navbar = ({ title }) => {
       <nav className="navbar">
         <button onClick={() => navigate('/dashboard')}>Users</button>
         <button onClick={() => navigate('/packages')}>Packages</button>
-        <button onClick={() => navigate('/reports')}>Reports</button>
+        <button onClick={() => navigate('/classes')}>Classes</button>
         <button onClick={() => {doSignOut().then(()=>{navigate('/signin')})}}>Logout</button>
       </nav>
     </header>

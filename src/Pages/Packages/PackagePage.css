@@ -137,3 +137,82 @@ button:hover {
   font-weight: bold;
   margin: 10px 0;
 }
+.custom-package-page {
+  padding: 20px;
+}
+
+.custom-add-button {
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.custom-table th,
+.custom-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.custom-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.25);
+  width: 90%;
+  max-width: 500px;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.custom-modal-content {
+  text-align: center;
+}
+
+.custom-input-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.custom-input-group input {
+  width: 100%;
+  padding: 8px;
+}
+
+.custom-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.custom-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

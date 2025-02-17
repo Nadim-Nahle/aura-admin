@@ -47,15 +47,20 @@ const Dashboard = () => {
           startDate: user.startDate === "none" ? new Date() : new Date(user.startDate),
           endDate: user.endDate === "none" ? oneMonthFromNow : new Date(user.endDate),
         }));
-        setUsers(processedUsers);
+  
+        // Sort users by endDate in descending order (further dates come first)
+        const sortedUsers = processedUsers.sort((a, b) => b.endDate - a.endDate);
+        
+        setUsers(sortedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
+    updateMemberships();
   }, []);
 
   const openAddEditModal = (user = null) => {

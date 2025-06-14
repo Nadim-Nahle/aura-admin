@@ -226,13 +226,30 @@ const Dashboard = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value, files } = e.target;
+const handleInputChange = (e) => {
+  const { name, value, files } = e.target;
+
+  if (name === 'phoneNumber') {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+
+    // Avoid double-prepending +961
+    const without961 = digits.startsWith('961') ? digits.slice(3) : digits;
+
+    const final = without961 ? '+961' + without961 : '';
+
     setNewUser((prev) => ({
       ...prev,
-      [name]: files ? files[0] : value,
+      [name]: final,
     }));
-  };
+    return;
+  }
+
+  setNewUser((prev) => ({
+    ...prev,
+    [name]: files ? files[0] : value,
+  }));
+};
   
   const exportToExcel = () => {
     if (users.length === 0) {

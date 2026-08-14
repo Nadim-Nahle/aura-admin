@@ -1,11 +1,11 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../authContext';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../authContext";
 
 const ProtectedRoute = ({ element }) => {
-  const { userLoggedIn } = useAuth();
+  const { userLoggedIn, isAdmin } = useAuth();
 
-  if (!userLoggedIn) {
+  if (!userLoggedIn || !isAdmin) {
     return <Navigate to="/signin" replace />;
   }
 

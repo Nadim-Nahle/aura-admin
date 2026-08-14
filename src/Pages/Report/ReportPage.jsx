@@ -1,118 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import Navbar from '../../components/Navbar';
+import React, { useEffect, useMemo, useState } from "react";
+import Navbar from "../../components/Navbar";
+import { apiRequest, getErrorMessage, jsonRequest } from "../../api/client";
+
+const calculateRevenue = (membership, privateSessions) => {
+  const memberships = { student: 35, regular: 50 };
+  const sessions = { 1: 10, 12: 100, 16: 130, 20: 160 };
+  return (memberships[membership] || 0) + (sessions[privateSessions] || 0);
+};
 
 const ReportPage = () => {
-  const [membersData, setMembersData] = useState([]);
-  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [members, setMembers] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [expenseName, setExpenseName] = useState('');
-  const [expensePrice, setExpensePrice] = useState(0);
+  const [expenseName, setExpenseName] = useState("");
+  const [expensePrice, setExpensePrice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const api = "https://us-central1-aura-9c98c.cloudfunctions.net/api/users/admin/topSecret";
-  const expensesApi = "https://us-central1-aura-9c98c.cloudfunctions.net/api/expenses"; // Your expense API
-  const authApiToken = "REMOVED_SECRET";
-
-  // Fetch members data from the API
   useEffect(() => {
-    const fetchMembers = async () => {
+    const loadReport = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get(api, {
-          headers: { "auth-api": authApiToken }
-        });
-        setMembersData(response.data);
+        const [userData, expenseData] = await Promise.all([
+          apiRequest("/admin/users"),
+          apiRequest("/expenses"),
+        ]);
+        setMembers(userData);
+        setExpenses(expenseData);
       } catch (error) {
-        console.error('Error fetching members data:', error);
+        setErrorMessage(getErrorMessage(error, "Unable to load the report"));
+      } finally {
+        setLoading(false);
       }
     };
-
-    fetchMembers();
+    loadReport();
   }, []);
 
-  // Fetch expenses and update the expenses state
-  useEffect(() => {
-    const fetchExpenses = async () => {
-      try {
-        const response = await axios.get(expensesApi, {
-          headers: { "auth-api": authApiToken }
-        });
-        setExpenses(response.data);
-      } catch (error) {
-        console.error('Error fetching expenses:', error);
-      }
-    };
+  const totals = useMemo(() => {
+    const revenue = members.reduce(
+      (total, member) =>
+        total + calculateRevenue(member.membership, member.privateSessions),
+      0,
+    );
+    const expensesTotal = expenses.reduce(
+      (total, expense) => total + Number(expense.price),
+      0,
+    );
+    return { revenue, expensesTotal, net: revenue - expensesTotal };
+  }, [members, expenses]);
 
-    fetchExpenses();
-  }, [expenses]);
-
-  // Revenue calculation function for memberships and private sessions
-  const calculateRevenue = (membership, privateSessions) => {
-    let membershipRevenue = 0;
-    let privateSessionRevenue = 0;
-
-    // Calculate membership revenue
-    if (membership === 'student') {
-      membershipRevenue = 35;
-    } else if (membership === 'regular') {
-      membershipRevenue = 50;
-    }
-
-    // Calculate private session revenue
-    if (privateSessions == 1) {
-      privateSessionRevenue = 10;
-    } else if (privateSessions == 12) {
-      privateSessionRevenue = 100;
-    } else if (privateSessions == 16) {
-      privateSessionRevenue = 130;
-    } else if (privateSessions == 20) {
-      privateSessionRevenue = 160;
-    }
-
-    return membershipRevenue + privateSessionRevenue;
-  };
-
-  // Calculate total revenue for all members
-  useEffect(() => {
-    const total = membersData.reduce((acc, member) => {
-      return acc + calculateRevenue(member.membership, member.privateSessions);
-    }, 0);
-
-    // Deduct expenses from the total revenue
-    const revenueAfterExpenses = total - expenses.reduce((acc, expense) => acc + expense.price, 0);
-
-    setTotalRevenue(revenueAfterExpenses);
-  }, [membersData, expenses]);
-
-  // Handle adding an expense
   const handleAddExpense = async () => {
-    if (!expenseName || expensePrice <= 0) {
-      alert("Please provide a valid name and price for the expense.");
+    const price = Number(expensePrice);
+    if (!expenseName.trim() || !Number.isFinite(price) || price <= 0) {
+      setErrorMessage("Enter a valid expense name and price.");
       return;
     }
 
+    setLoading(true);
     try {
-      await axios.post(expensesApi, {
+      const expense = await jsonRequest("/expenses", "POST", {
         name: expenseName,
-        price: expensePrice,
-      }, {
-        headers: { "auth-api": authApiToken }
+        price,
       });
-
-      // Clear input fields after the expense is added
-      setExpenseName('');
-      setExpensePrice(0);
-
-      // Trigger the fetchExpenses function to update the expenses
-      setExpenses(prev => [...prev, { name: expenseName, price: expensePrice }]);
+      setExpenses((previous) => [expense, ...previous]);
+      setExpenseName("");
+      setExpensePrice("");
+      setErrorMessage("");
     } catch (error) {
-      console.error('Error adding expense:', error);
+      setErrorMessage(getErrorMessage(error, "Unable to add expense"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteExpense = async (id) => {
+    setLoading(true);
+    try {
+      await apiRequest(`/expenses/${id}`, { method: "DELETE" });
+      setExpenses((previous) =>
+        previous.filter((expense) => expense.id !== id),
+      );
+      setErrorMessage("");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Unable to delete expense"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <>
       <Navbar title="Reports" />
-      <div>
+      <div className="dashboard">
+        {loading && <p>Loading...</p>}
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
         <h1>Revenue Report</h1>
         <table>
           <thead>
@@ -124,59 +104,65 @@ const ReportPage = () => {
             </tr>
           </thead>
           <tbody>
-            {membersData.map((member) => {
-              const revenue = calculateRevenue(member.membership, member.privateSessions);
-              return (
-                <tr key={member.id}>
-                  <td>{member.name}</td>
-                  <td>{member.membership}</td>
-                  <td>{member.privateSessions}</td>
-                  <td>${revenue}</td>
-                </tr>
-              );
-            })}
+            {members.map((member) => (
+              <tr key={member.id}>
+                <td>{member.displayName}</td>
+                <td>{member.membership}</td>
+                <td>{member.privateSessions}</td>
+                <td>
+                  ${calculateRevenue(member.membership, member.privateSessions)}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
 
-        <h2>Total Revenue Before Expenses: ${membersData.reduce((acc, member) => acc + calculateRevenue(member.membership, member.privateSessions), 0)}</h2>
-        <h3>Total Expenses: ${expenses.reduce((acc, expense) => acc + expense.price, 0)}</h3>
-        <h2>Total Revenue After Expenses: ${totalRevenue}</h2>
+        <h2>Total Revenue Before Expenses: ${totals.revenue}</h2>
+        <h3>Total Expenses: ${totals.expensesTotal}</h3>
+        <h2>Total Revenue After Expenses: ${totals.net}</h2>
 
-        {/* Table to display expenses */}
         <h3>Expenses</h3>
         <table>
           <thead>
             <tr>
               <th>Expense Name</th>
               <th>Price</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {expenses.map((expense, index) => (
-              <tr key={index}>
+            {expenses.map((expense) => (
+              <tr key={expense.id}>
                 <td>{expense.name}</td>
                 <td>${expense.price}</td>
+                <td>
+                  <button onClick={() => handleDeleteExpense(expense.id)}>
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* Form to add new expenses */}
-        <div className='expense-form'> 
+        <div className="expense-form">
           <h3>Add Expense</h3>
-          <input 
-            type="text" 
-            placeholder="Expense Name" 
-            value={expenseName} 
-            onChange={(e) => setExpenseName(e.target.value)} 
+          <input
+            placeholder="Expense Name"
+            value={expenseName}
+            onChange={(event) => setExpenseName(event.target.value)}
           />
-          <input 
-            type="number" 
-            placeholder="Expense Price" 
-            value={expensePrice} 
-            onChange={(e) => setExpensePrice(Number(e.target.value))} 
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            placeholder="Expense Price"
+            value={expensePrice}
+            onChange={(event) => setExpensePrice(event.target.value)}
           />
-          <button className="add-expense" onClick={handleAddExpense}>Add Expense</button>
+          <button className="add-expense" onClick={handleAddExpense}>
+            Add Expense
+          </button>
         </div>
       </div>
     </>

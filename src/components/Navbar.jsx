@@ -1,7 +1,7 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
-import './Navbar.css'; // Create a CSS file for styling if needed
-import { doSignOut } from '../firebase/auth';
+import React from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
+import "./Navbar.css"; // Create a CSS file for styling if needed
+import { doSignOut } from "../firebase/auth";
 
 const Navbar = ({ title }) => {
   const navigate = useNavigate(); // Initialize useNavigate hook
@@ -12,10 +12,19 @@ const Navbar = ({ title }) => {
         <h1>{title}</h1>
       </div>
       <nav className="navbar">
-        <button onClick={() => navigate('/dashboard')}>Users</button>
-        <button onClick={() => navigate('/packages')}>Packages</button>
-        <button onClick={() => navigate('/classes')}>Classes</button>
-        <button onClick={() => {doSignOut().then(()=>{navigate('/signin')})}}>Logout</button>
+        <button onClick={() => navigate("/dashboard")}>Users</button>
+        <button onClick={() => navigate("/packages")}>Packages</button>
+        <button onClick={() => navigate("/classes")}>Classes</button>
+        <button onClick={() => navigate("/report")}>Reports</button>
+        <button
+          onClick={() => {
+            doSignOut().then(() => {
+              navigate("/signin");
+            });
+          }}
+        >
+          Logout
+        </button>
       </nav>
     </header>
   );

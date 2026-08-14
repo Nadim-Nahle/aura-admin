@@ -1,108 +1,77 @@
-  import React, { useState } from "react";
-  import "./SignIn.css";
-  import { useAuth } from "../../contexts/authContext";
-  import { doSignInWithEmailAndPassword } from "../../firebase/auth";
-  import { Navigate } from "react-router-dom";
-  import { signOut } from "firebase/auth";
-  import { auth } from "../../firebase/firebase";
+import React, { useState } from "react";
+import "./SignIn.css";
+import { useAuth } from "../../contexts/authContext";
+import { doSignInWithEmailAndPassword } from "../../firebase/auth";
+import { Navigate } from "react-router-dom";
+import { doSignOut } from "../../firebase/auth";
 
-  const api = 'https://us-central1-aura-9c98c.cloudfunctions.net/api/users';
-  const authApiToken = 'REMOVED_SECRET'; 
+const SignIn = () => {
+  const { userLoggedIn, refreshSession } = useAuth();
 
-  const SignIn = () => {
-    const { userLoggedIn, setUserLoggedIn } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [isSignIn, setIsSignIn] = useState(false);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+  // Redirect to home if the user is already logged in
+  if (userLoggedIn) {
+    return <Navigate to="/" replace={true} />;
+  }
 
-    // Redirect to home if the user is already logged in
-    if (userLoggedIn) {
-      return <Navigate to="/" replace={true} />;
-    }
-
-    const onSubmit = async (e) => {
-      e.preventDefault();
-      if (!isSignIn) {
-        setIsSignIn(true);
-        setLoading(true); 
-        try {
-          const userCrd = await doSignInWithEmailAndPassword(email, password);
-          const id = userCrd.user.uid;
-          const isAdminUser = await getUserRole(id);
-          
-          if (isAdminUser) {
-            setIsAdmin(true);
-            setError("You are not authorized to log in.");
-        // await signOut(auth); // Ensure the user is signed out
-          } else {
-            setIsAdmin(true);
-            setUserLoggedIn(true); 
-          }
-        } catch (error) {
-          setError(error.message);
-          setIsSignIn(false);
-        }
-        setLoading(false); 
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      await doSignInWithEmailAndPassword(email.trim(), password);
+      const isAdminUser = await refreshSession();
+      if (!isAdminUser) {
+        await doSignOut();
+        setError("This account does not have administrator access.");
       }
-    };
-
-    const getUserRole = async (id) => {
-      try {
-        const response = await fetch(`${api}/${id}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'auth-api': authApiToken,
-          },
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        return data.role === 'admin';
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        return false;
-      }
+    } catch (error) {
+      const messages = {
+        "auth/invalid-credential": "The email or password is incorrect.",
+        "auth/invalid-email": "Enter a valid email address.",
+        "auth/too-many-requests": "Too many attempts. Please try again later.",
+        "auth/network-request-failed":
+          "Unable to connect. Check your internet connection.",
+      };
+      setError(messages[error?.code] || "Unable to sign in. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    if (loading) {
-      return <p>Loading...</p>; 
-    }
-
-    if (isSignIn && isAdmin) {
-      return <Navigate to="/" replace={true} />;
-    }
-
-    return (
-      <div className="sign-in-container">
-        <div className="sign-in-form-container">
-          <h2>Sign In</h2>
-          {error && <p className="error-message">{error}</p>}
-          <form onSubmit={onSubmit}>
-            <label>Email:</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <label>Password:</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button type="submit">Sign In</button>
-          </form>
-        </div>
-      </div>
-    );
   };
 
-  export default SignIn;
+  if (loading) {
+    return <p>Loading...</p>;
+  }
+
+  return (
+    <div className="sign-in-container">
+      <div className="sign-in-form-container">
+        <h2>Sign In</h2>
+        {error && <p className="error-message">{error}</p>}
+        <form onSubmit={onSubmit}>
+          <label>Email:</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <label>Password:</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="submit">Sign In</button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default SignIn;

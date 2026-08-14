@@ -1,94 +1,59 @@
-import React, { useState, useEffect } from "react";
-import "./ClassPage.css"; // Updated CSS filename
+import React, { useEffect, useState } from "react";
+import "./ClassPage.css";
 import Navbar from "../../components/Navbar";
+import { apiRequest, getErrorMessage, jsonRequest } from "../../api/client";
 
 const ClassPage = () => {
-  const [packages, setPackages] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const authApiToken = "REMOVED_SECRET"; // Replace with your actual token
-  const api = "https://us-central1-aura-9c98c.cloudfunctions.net/api/classes";
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    const fetchPackages = async () => {
+    const fetchClasses = async () => {
       setLoading(true);
       try {
-        const response = await fetch(api, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "auth-api": authApiToken,
-          },
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch packages");
-
-        const data = await response.json();
-        setPackages(data);
+        setClasses(await apiRequest("/classes"));
       } catch (error) {
-        console.error("Error fetching classes:", error);
+        setErrorMessage(getErrorMessage(error, "Unable to load classes"));
       } finally {
         setLoading(false);
       }
     };
+    fetchClasses();
+  }, []);
 
-    fetchPackages();
-  }, [api, authApiToken]);
-
-  const handleAddPackage = async () => {
-    if (!name || !price) {
-      alert("Please fill in all fields.");
+  const handleAddClass = async () => {
+    if (!name.trim() || !price) {
+      setErrorMessage("Please fill in all fields.");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(api, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-api": authApiToken,
-        },
-        body: JSON.stringify({ name, price }),
-      });
-
-      if (!response.ok) throw new Error("Failed to add the class");
-
-      const newPackage = await response.json();
-      setPackages([...packages, newPackage]);
+      const newClass = await jsonRequest("/classes", "POST", { name, price });
+      setClasses((previous) => [...previous, newClass]);
       setShowAddModal(false);
       setName("");
       setPrice("");
+      setErrorMessage("");
     } catch (error) {
-      console.error("Error adding class:", error);
+      setErrorMessage(getErrorMessage(error, "Unable to add class"));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!id) return;
-
     setLoading(true);
     try {
-      const response = await fetch(`https://us-central1-aura-9c98c.cloudfunctions.net/api/classes/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-api": authApiToken,
-        },
-      });
-
-      if (!response.ok) throw new Error("Failed to delete the class");
-
-      // Update the packages list by filtering out the deleted package
-      setPackages(packages.filter((pkg) => pkg.id !== id));
+      await apiRequest(`/classes/${id}`, { method: "DELETE" });
+      setClasses((previous) => previous.filter((item) => item.id !== id));
+      setErrorMessage("");
     } catch (error) {
-      console.error("Error deleting class:", error);
-      alert("Failed to delete the class. Please try again.");
+      setErrorMessage(getErrorMessage(error, "Unable to delete class"));
     } finally {
       setLoading(false);
     }
@@ -98,6 +63,7 @@ const ClassPage = () => {
     <>
       <Navbar title="Class Management" />
       <div className="custom-package-page">
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
         <button
           className="custom-add-button"
           onClick={() => setShowAddModal(true)}
@@ -106,7 +72,7 @@ const ClassPage = () => {
         </button>
         {loading && (
           <div className="custom-overlay">
-            <div className="custom-spinner"></div>
+            <div className="custom-spinner" />
           </div>
         )}
         <table className="custom-table">
@@ -118,12 +84,12 @@ const ClassPage = () => {
             </tr>
           </thead>
           <tbody>
-            {packages.map((pkg) => (
-              <tr key={pkg.id}>
-                <td>{pkg.name}</td>
-                <td>{pkg.price}</td>
+            {classes.map((item) => (
+              <tr key={item.id}>
+                <td>{item.name}</td>
+                <td>{item.price}</td>
                 <td>
-                <button onClick={() => handleDelete(pkg.id)}>Delete</button>
+                  <button onClick={() => handleDelete(item.id)}>Delete</button>
                 </td>
               </tr>
             ))}
@@ -133,27 +99,27 @@ const ClassPage = () => {
         {showAddModal && (
           <div className="custom-modal">
             <div className="custom-modal-content">
-              <h2>Add New class</h2>
+              <h2>Add New Class</h2>
               <div className="custom-input-group">
                 <label>Name</label>
                 <input
-                  type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(event) => setName(event.target.value)}
                 />
-              </div>
-              <div className="custom-input-group">
               </div>
               <div className="custom-input-group">
                 <label>Price</label>
                 <input
                   type="number"
+                  min="0"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(event) => setPrice(event.target.value)}
                 />
               </div>
               <div className="modalbuttons">
-                <button className="add_package" onClick={handleAddPackage}>Add Class</button>
+                <button className="add_package" onClick={handleAddClass}>
+                  Add Class
+                </button>
                 <button onClick={() => setShowAddModal(false)}>Cancel</button>
               </div>
             </div>

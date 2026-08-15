@@ -53,4 +53,17 @@ describe("authenticated API client", () => {
     await expect(apiRequest("/admin/users")).rejects.toBeInstanceOf(ApiError);
     expect(auth.signOut).toHaveBeenCalledTimes(1);
   });
+
+  it("returns a clear message when the API cannot be reached", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(apiRequest("/admin/users")).rejects.toEqual(
+      expect.objectContaining({
+        status: 0,
+        message:
+          "Unable to reach GrowFitness. Check your connection and try again.",
+      }),
+    );
+    expect(auth.signOut).not.toHaveBeenCalled();
+  });
 });

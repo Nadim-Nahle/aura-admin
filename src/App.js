@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Home from "./Pages/Home/Home";
 import Dashboard from "./Pages/Dashboard/Dashboard";
 import PackagePage from "./Pages/Packages/PackagePage";
@@ -31,6 +31,7 @@ const App = () => {
           path="/report"
           element={<ProtectedRoute element={<ReportPage />} />}
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
   );

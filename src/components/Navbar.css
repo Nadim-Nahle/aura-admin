@@ -1,35 +1,188 @@
-/* src/components/Navbar.css */
-.navbar-header {
-  background-color: #007bff; /* Dark background similar to Home */
-  padding: 20px;
-  color: white;
-  display: flex;
-  justify-content: space-between;
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: auto minmax(110px, auto) 1fr auto;
+  min-height: 82px;
   align-items: center;
+  gap: 26px;
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(17, 17, 17, 0.92);
+  backdrop-filter: blur(18px);
 }
 
-.logo-placeholder {
-  font-size: 24px;
-  font-weight: bold;
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 0.94rem;
+  font-weight: 850;
+  line-height: 1.05;
+  text-decoration: none;
 }
 
-.navbar button {
-  background: none; /* Remove button background */
-  border: none; /* Remove button border */
-  color: white; /* Set text color to white */
-  margin: 0 15px; /* Same margin as links */
-  text-decoration: none; /* Remove underline */
-  font-weight: bold; /* Bold text */
-  cursor: pointer; /* Pointer cursor on hover */
-  font-size: 16px; /* Consistent font size */
+.app-brand img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
 }
 
-.navbar button:hover {
-  text-decoration: underline; /* Add underline on hover */
-  color: white;
-  background-color: #007bff;
+.app-brand small {
+  display: block;
+  margin-top: 4px;
+  color: var(--grow-red-bright);
+  font-size: 0.59rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.navbar button:focus {
-  outline: none; /* Remove focus outline */
+.app-header__title {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.app-nav__link {
+  padding: 9px 11px;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-decoration: none;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.app-nav__link:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.app-nav__link--active {
+  background: var(--grow-red-soft);
+  color: #ffb6b9;
+}
+
+.app-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.app-account__avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border: 1px solid rgba(181, 31, 36, 0.4);
+  border-radius: 50%;
+  background: var(--grow-red-soft);
+  color: #ffb6b9;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.app-account__copy {
+  display: flex;
+  max-width: 155px;
+  flex-direction: column;
+}
+
+.app-account__copy strong {
+  font-size: 0.75rem;
+}
+
+.app-account__copy span {
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--subtle);
+  font-size: 0.67rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-logout {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.app-logout:hover:not(:disabled) {
+  border-color: rgba(255, 107, 112, 0.35);
+  color: #ff9b9f;
+}
+
+.app-logout:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.navbar-alert {
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 107, 112, 0.25);
+  background: var(--danger-soft);
+  color: #ffb7ba;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1180px) {
+  .app-header {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .app-header__title,
+  .app-account__copy {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-header {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 10px 16px 0;
+  }
+
+  .app-nav {
+    grid-column: 1 / -1;
+    order: 3;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: none;
+  }
+
+  .app-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-account__avatar {
+    display: none;
+  }
+
+  .app-brand img {
+    width: 36px;
+    height: 36px;
+  }
 }

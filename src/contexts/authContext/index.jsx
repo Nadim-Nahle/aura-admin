@@ -19,11 +19,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function initializeUser(user, forceRefresh = false) {
+    let admin = false;
     if (user) {
       try {
         const token = await user.getIdTokenResult(forceRefresh);
+        admin = token.claims.role === "admin";
         setCurrentUser(user);
-        setIsAdmin(token.claims.role === "admin");
+        setIsAdmin(admin);
       } catch {
         setCurrentUser(null);
         setIsAdmin(false);
@@ -33,15 +35,10 @@ export function AuthProvider({ children }) {
       setIsAdmin(false);
     }
     setLoading(false);
+    return admin;
   }
 
-  const refreshSession = async () => {
-    const user = auth.currentUser;
-    await initializeUser(user, true);
-    if (!user) return false;
-    const token = await user.getIdTokenResult();
-    return token.claims.role === "admin";
-  };
+  const refreshSession = () => initializeUser(auth.currentUser, true);
 
   const value = {
     currentUser,
@@ -53,7 +50,14 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading ? (
+        <div className="auth-loading" role="status" aria-live="polite">
+          <span className="spinner" aria-hidden="true" />
+          Verifying your session…
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }

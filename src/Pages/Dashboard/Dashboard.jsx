@@ -16,6 +16,14 @@ const MAX_BARCODE_BYTES = 5 * 1024 * 1024;
 const DIRECTORY_PAGE_LIMIT = 50;
 const DIRECTORY_SKELETON_ROWS = 8;
 const ALLOWED_BARCODE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const createDefaultFilters = () => ({
+  sort: "",
+  membership: "",
+  status: "",
+  dateField: "endDate",
+  dateFrom: "",
+  dateTo: "",
+});
 const emptySummary = {
   totalMembers: 0,
   activeMembers: 0,
@@ -60,12 +68,6 @@ const normalizeUser = (user) => ({
   startDate: parseDate(user.startDate, null),
   endDate: parseDate(user.endDate, null),
 });
-
-const sortUsers = (users) =>
-  [...users].sort(
-    (a, b) =>
-      (b.endDate?.getTime?.() || 0) - (a.endDate?.getTime?.() || 0),
-  );
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -132,6 +134,8 @@ const Dashboard = () => {
   const [users, setUsers] = useState([]);
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
+  const [filters, setFilters] = useState(createDefaultFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [pageToken, setPageToken] = useState(null);
   const [previousPageTokens, setPreviousPageTokens] = useState([]);
   const [nextPageToken, setNextPageToken] = useState(null);
@@ -188,12 +192,20 @@ const Dashboard = () => {
         });
         if (pageToken) params.set("pageToken", pageToken);
         if (activeSearch) params.set("search", activeSearch);
+        if (filters.sort) params.set("sort", filters.sort);
+        if (filters.membership) params.set("membership", filters.membership);
+        if (filters.status) params.set("status", filters.status);
+        if (filters.dateFrom || filters.dateTo) {
+          params.set("dateField", filters.dateField);
+          if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+          if (filters.dateTo) params.set("dateTo", filters.dateTo);
+        }
         const result = await apiRequestWithResponse(
           `/admin/users?${params.toString()}`,
         );
         if (!active) return;
         const data = result.data;
-        setUsers(sortUsers(data.map(normalizeUser)));
+        setUsers(data.map(normalizeUser));
         setNextPageToken(result.headers.get("X-Next-Page-Token"));
         const responseTotal = Number(result.headers.get("X-Total-Count"));
         setTotalCount(Number.isFinite(responseTotal) ? responseTotal : data.length);
@@ -214,7 +226,23 @@ const Dashboard = () => {
     return () => {
       active = false;
     };
-  }, [activeSearch, pageToken, refreshVersion]);
+  }, [activeSearch, filters, pageToken, refreshVersion]);
+
+  const resetDirectoryPage = () => {
+    setPageToken(null);
+    setPreviousPageTokens([]);
+  };
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((previous) => ({ ...previous, [name]: value }));
+    resetDirectoryPage();
+  };
+
+  const clearFilters = () => {
+    setFilters(createDefaultFilters());
+    resetDirectoryPage();
+  };
 
   const goToNextPage = () => {
     if (!nextPageToken) return;
@@ -341,11 +369,9 @@ const Dashboard = () => {
 
       const savedUser = normalizeUser(result.user);
       setUsers((previous) =>
-        sortUsers(
-          currentUserId
-            ? previous.map((user) => (user.id === currentUserId ? savedUser : user))
-            : [...previous, savedUser],
-        ),
+        currentUserId
+          ? previous.map((user) => (user.id === currentUserId ? savedUser : user))
+          : [...previous, savedUser],
       );
       setFeedback({
         type: "success",
@@ -355,7 +381,7 @@ const Dashboard = () => {
       setIsAddEditModalOpen(false);
     } catch (error) {
       if (createdUser) {
-        setUsers((previous) => sortUsers([...previous, normalizeUser(createdUser)]));
+        setUsers((previous) => [...previous, normalizeUser(createdUser)]);
         setIsAddEditModalOpen(false);
         setFeedback({
           type: "error",
@@ -443,6 +469,12 @@ const Dashboard = () => {
   };
 
   const initialPageLoading = !hasLoadedDirectory || !hasLoadedSummary;
+  const activeFilterCount =
+    Number(Boolean(filters.sort)) +
+    Number(Boolean(filters.membership)) +
+    Number(Boolean(filters.status)) +
+    Number(Boolean(filters.dateFrom || filters.dateTo));
+  const hasDirectoryFilters = activeFilterCount > 0 || Boolean(activeSearch);
 
   return (
     <>
@@ -527,19 +559,111 @@ const Dashboard = () => {
                 {initialPageLoading ? (
                   <span className="skeleton-block skeleton-meta" aria-label="Loading members" />
                 ) : (
-                  <>{users.length} shown · {totalCount} {activeSearch ? "matches" : "accounts"}</>
+                  <>{users.length} shown · {totalCount} {hasDirectoryFilters ? "matches" : "accounts"}</>
                 )}
               </p>
             </div>
-            <input
-              className="search-control"
-              type="search"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search name, email, phone…"
-              aria-label="Search members"
-            />
+            <div className="directory-tools">
+              <input
+                className="search-control"
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search name, email, phone…"
+                aria-label="Search members"
+              />
+              <button
+                type="button"
+                className={`btn btn-secondary filter-toggle${filtersOpen ? " filter-toggle--open" : ""}`}
+                onClick={() => setFiltersOpen((open) => !open)}
+                aria-expanded={filtersOpen}
+                aria-controls="member-filters"
+              >
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="filter-count" aria-label={`${activeFilterCount} active filters`}>
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
+
+          {filtersOpen && (
+            <div className="filter-bar" id="member-filters" aria-label="Member filters">
+              <label className="filter-control">
+                <span>Sort by</span>
+                <select name="sort" value={filters.sort} onChange={handleFilterChange}>
+                  <option value="">Default order</option>
+                  <option value="name-asc">Name A–Z</option>
+                  <option value="name-desc">Name Z–A</option>
+                  <option value="start-newest">Start date: newest</option>
+                  <option value="start-oldest">Start date: oldest</option>
+                  <option value="end-newest">End date: newest</option>
+                  <option value="end-oldest">End date: oldest</option>
+                </select>
+              </label>
+
+              <label className="filter-control">
+                <span>Membership</span>
+                <select name="membership" value={filters.membership} onChange={handleFilterChange}>
+                  <option value="">All memberships</option>
+                  <option value="regular">Regular</option>
+                  <option value="student">Student</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+
+              <label className="filter-control">
+                <span>Status</span>
+                <select name="status" value={filters.status} onChange={handleFilterChange}>
+                  <option value="">Any status</option>
+                  <option value="active">Active</option>
+                  <option value="expired">Expired</option>
+                  <option value="no-membership">No membership</option>
+                </select>
+              </label>
+
+              <label className="filter-control">
+                <span>Date field</span>
+                <select name="dateField" value={filters.dateField} onChange={handleFilterChange}>
+                  <option value="startDate">Membership start</option>
+                  <option value="endDate">Membership end</option>
+                </select>
+              </label>
+
+              <label className="filter-control">
+                <span>From</span>
+                <input
+                  type="date"
+                  name="dateFrom"
+                  value={filters.dateFrom}
+                  max={filters.dateTo || undefined}
+                  onChange={handleFilterChange}
+                />
+              </label>
+
+              <label className="filter-control">
+                <span>To</span>
+                <input
+                  type="date"
+                  name="dateTo"
+                  value={filters.dateTo}
+                  min={filters.dateFrom || undefined}
+                  onChange={handleFilterChange}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-small filter-clear"
+                onClick={clearFilters}
+                disabled={activeFilterCount === 0}
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
 
           <div
             className={`directory-progress${directoryLoading && !initialPageLoading ? " directory-progress--active" : ""}`}
@@ -628,8 +752,10 @@ const Dashboard = () => {
             </table>
             {!initialPageLoading && !directoryLoading && users.length === 0 && (
               <div className="empty-state">
-                <strong>{activeSearch ? "No matching members" : "No members yet"}</strong>
-                {activeSearch ? "Try a different search term." : "Add your first member to get started."}
+                <strong>{hasDirectoryFilters ? "No matching members" : "No members yet"}</strong>
+                {hasDirectoryFilters
+                  ? "Adjust the search or filters and try again."
+                  : "Add your first member to get started."}
               </div>
             )}
           </div>

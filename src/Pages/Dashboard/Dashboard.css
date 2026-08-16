@@ -43,3 +43,107 @@
 .react-datepicker__day--disabled {
   color: var(--subtle);
 }
+
+.directory-card {
+  position: relative;
+}
+
+.directory-progress {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.directory-progress::after {
+  position: absolute;
+  inset: 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, var(--grow-red-bright), transparent);
+  content: "";
+  opacity: 0;
+  transform: translateX(-110%);
+}
+
+.directory-progress--active::after {
+  opacity: 1;
+  animation: directory-progress 900ms ease-in-out infinite;
+}
+
+.directory-table-wrap {
+  min-height: 520px;
+}
+
+.directory-card .data-table tbody {
+  transition: opacity 160ms ease;
+}
+
+.directory-card--refreshing .data-table tbody {
+  opacity: 0.68;
+}
+
+.skeleton-block {
+  display: inline-block;
+  overflow: hidden;
+  border-radius: 6px;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.055) 25%,
+    rgba(255, 255, 255, 0.11) 42%,
+    rgba(255, 255, 255, 0.055) 60%
+  );
+  background-size: 240% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-stat {
+  width: 72px;
+  height: 34px;
+  vertical-align: middle;
+}
+
+.skeleton-meta {
+  width: 170px;
+  height: 13px;
+  vertical-align: middle;
+}
+
+.skeleton-row {
+  height: 73px;
+}
+
+.skeleton-cell {
+  width: min(110px, 80%);
+  height: 13px;
+}
+
+.skeleton-row td:first-child .skeleton-cell {
+  width: 165px;
+  height: 36px;
+}
+
+.skeleton-row td:nth-child(7) .skeleton-cell {
+  width: 44px;
+  height: 44px;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes directory-progress {
+  to {
+    transform: translateX(290%);
+  }
+}
+
+@media (max-width: 720px) {
+  .directory-table-wrap {
+    min-height: 430px;
+  }
+}

@@ -1,8 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./ReportPage.css";
 import Navbar from "../../components/Navbar";
 import Modal from "../../components/Modal";
-import { apiRequest, getErrorMessage, jsonRequest } from "../../api/client";
+import {
+  apiRequest,
+  apiRequestWithResponse,
+  getErrorMessage,
+  jsonRequest,
+} from "../../api/client";
+
+const REPORT_PAGE_LIMIT = 50;
+const emptySummary = {
+  estimatedRevenue: 0,
+  expensesTotal: 0,
+  estimatedNet: 0,
+  payingMembers: 0,
+};
 
 const membershipRates = { student: 35, regular: 50 };
 const privateSessionRates = { 1: 10, 12: 100, 16: 130, 20: 160 };
@@ -18,6 +31,11 @@ export const calculateRevenue = (membership, privateSessions) =>
 
 const ReportPage = () => {
   const [members, setMembers] = useState([]);
+  const [summary, setSummary] = useState(emptySummary);
+  const [memberPageToken, setMemberPageToken] = useState(null);
+  const [previousPageTokens, setPreviousPageTokens] = useState([]);
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [memberCount, setMemberCount] = useState(0);
   const [expenses, setExpenses] = useState([]);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
   const [expenseName, setExpenseName] = useState("");
@@ -29,11 +47,11 @@ const ReportPage = () => {
     const loadReport = async () => {
       setLoading(true);
       try {
-        const [userData, expenseData] = await Promise.all([
-          apiRequest("/admin/users"),
+        const [summaryData, expenseData] = await Promise.all([
+          apiRequest("/admin/reports/summary"),
           apiRequest("/expenses"),
         ]);
-        setMembers(userData);
+        setSummary(summaryData);
         setExpenses(expenseData);
       } catch (error) {
         setFeedback({
@@ -47,26 +65,53 @@ const ReportPage = () => {
     loadReport();
   }, []);
 
-  const totals = useMemo(() => {
-    const revenue = members.reduce(
-      (total, member) =>
-        total + calculateRevenue(member.membership, member.privateSessions),
-      0,
-    );
-    const expensesTotal = expenses.reduce(
-      (total, expense) => total + (Number(expense.price) || 0),
-      0,
-    );
-    const activeMembers = members.filter(
-      (member) => member.membership && member.membership !== "none",
-    ).length;
-    return {
-      revenue,
-      expensesTotal,
-      net: revenue - expensesTotal,
-      activeMembers,
+  useEffect(() => {
+    let active = true;
+    const loadMemberPage = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({ limit: String(REPORT_PAGE_LIMIT) });
+        if (memberPageToken) params.set("pageToken", memberPageToken);
+        const result = await apiRequestWithResponse(
+          `/admin/users?${params.toString()}`,
+        );
+        if (!active) return;
+        setMembers(result.data);
+        setNextPageToken(result.headers.get("X-Next-Page-Token"));
+        const responseTotal = Number(result.headers.get("X-Total-Count"));
+        setMemberCount(
+          Number.isFinite(responseTotal) ? responseTotal : result.data.length,
+        );
+      } catch (error) {
+        if (!active) return;
+        setFeedback({
+          type: "error",
+          text: getErrorMessage(error, "Unable to load member revenue"),
+        });
+      } finally {
+        if (active) setLoading(false);
+      }
     };
-  }, [members, expenses]);
+    loadMemberPage();
+    return () => {
+      active = false;
+    };
+  }, [memberPageToken]);
+
+  const goToNextPage = () => {
+    if (!nextPageToken) return;
+    setPreviousPageTokens((previous) => [...previous, memberPageToken]);
+    setMemberPageToken(nextPageToken);
+  };
+
+  const goToPreviousPage = () => {
+    setPreviousPageTokens((previous) => {
+      if (previous.length === 0) return previous;
+      const updated = [...previous];
+      setMemberPageToken(updated.pop() ?? null);
+      return updated;
+    });
+  };
 
   const handleAddExpense = async (event) => {
     event.preventDefault();
@@ -86,6 +131,14 @@ const ReportPage = () => {
         price,
       });
       setExpenses((previous) => [expense, ...previous]);
+      setSummary((previous) => {
+        const expensesTotal = previous.expensesTotal + price;
+        return {
+          ...previous,
+          expensesTotal,
+          estimatedNet: previous.estimatedRevenue - expensesTotal,
+        };
+      });
       setExpenseName("");
       setExpensePrice("");
       setFeedback({ type: "success", text: `${expense.name} was added.` });
@@ -107,6 +160,17 @@ const ReportPage = () => {
       setExpenses((previous) =>
         previous.filter((expense) => expense.id !== expenseToDelete.id),
       );
+      setSummary((previous) => {
+        const expensesTotal = Math.max(
+          0,
+          previous.expensesTotal - (Number(expenseToDelete.price) || 0),
+        );
+        return {
+          ...previous,
+          expensesTotal,
+          estimatedNet: previous.estimatedRevenue - expensesTotal,
+        };
+      });
       setFeedback({
         type: "success",
         text: `${expenseToDelete.name} was deleted.`,
@@ -147,24 +211,24 @@ const ReportPage = () => {
         <section className="stat-grid" aria-label="Financial summary">
           <article className="stat-card stat-card--accent">
             <p className="stat-label">Estimated revenue</p>
-            <p className="stat-value">{currency.format(totals.revenue)}</p>
+            <p className="stat-value">{currency.format(summary.estimatedRevenue)}</p>
             <p className="stat-detail">Current member selections</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Expenses</p>
-            <p className="stat-value">{currency.format(totals.expensesTotal)}</p>
+            <p className="stat-value">{currency.format(summary.expensesTotal)}</p>
             <p className="stat-detail">Recorded operating costs</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Estimated net</p>
-            <p className={`stat-value ${totals.net < 0 ? "stat-value--negative" : "stat-value--positive"}`}>
-              {currency.format(totals.net)}
+            <p className={`stat-value ${summary.estimatedNet < 0 ? "stat-value--negative" : "stat-value--positive"}`}>
+              {currency.format(summary.estimatedNet)}
             </p>
             <p className="stat-detail">Revenue minus expenses</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Paying members</p>
-            <p className="stat-value">{totals.activeMembers}</p>
+            <p className="stat-value">{summary.payingMembers}</p>
             <p className="stat-detail">With a selected membership</p>
           </article>
         </section>
@@ -174,7 +238,9 @@ const ReportPage = () => {
             <div className="surface-card__header">
               <div>
                 <h2>Revenue breakdown</h2>
-                <p>Estimated from membership and private-session selections.</p>
+                <p>
+                  Page {previousPageTokens.length + 1} of member estimates · {memberCount} members total.
+                </p>
               </div>
             </div>
             <div className="data-table-wrap">
@@ -206,6 +272,25 @@ const ReportPage = () => {
               {!loading && members.length === 0 && (
                 <div className="empty-state"><strong>No member revenue yet</strong>Member revenue will appear here.</div>
               )}
+            </div>
+            <div className="pagination-bar" aria-label="Revenue breakdown pages">
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={goToPreviousPage}
+                disabled={previousPageTokens.length === 0 || loading}
+              >
+                Previous
+              </button>
+              <span>Page {previousPageTokens.length + 1}</span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={goToNextPage}
+                disabled={!nextPageToken || loading}
+              >
+                Next
+              </button>
             </div>
           </section>
 

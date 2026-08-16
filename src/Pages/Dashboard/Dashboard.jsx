@@ -14,6 +14,7 @@ import { useAuth } from "../../contexts/authContext";
 
 const MAX_BARCODE_BYTES = 5 * 1024 * 1024;
 const DIRECTORY_PAGE_LIMIT = 50;
+const DIRECTORY_SKELETON_ROWS = 8;
 const ALLOWED_BARCODE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const emptySummary = {
   totalMembers: 0,
@@ -84,16 +85,20 @@ const hasImage = (value) => Boolean(value && value !== "none");
 
 const MemberAvatar = ({ user }) => {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const showImage = hasImage(user.profilePicture) && !failed;
+
   return (
     <span className="avatar" aria-hidden="true">
-      {hasImage(user.profilePicture) && !failed ? (
+      <span className="avatar__fallback">{getInitials(user.name)}</span>
+      {showImage && (
         <img
+          className={loaded ? "media-loaded" : ""}
           src={user.profilePicture}
           alt=""
+          onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
         />
-      ) : (
-        getInitials(user.name)
       )}
     </span>
   );
@@ -101,16 +106,24 @@ const MemberAvatar = ({ user }) => {
 
 const BarcodePreview = ({ user }) => {
   const [failed, setFailed] = useState(false);
-  if (!hasImage(user.barcode) || failed) {
-    return <span className="image-placeholder">No QR</span>;
-  }
+  const [loaded, setLoaded] = useState(false);
+  const showImage = hasImage(user.barcode) && !failed;
+
   return (
-    <img
-      className="barcode-preview"
-      src={user.barcode}
-      alt={`${user.name} barcode`}
-      onError={() => setFailed(true)}
-    />
+    <span className="barcode-shell">
+      <span className="image-placeholder" aria-hidden={showImage && loaded}>
+        {showImage ? "QR" : "No QR"}
+      </span>
+      {showImage && (
+        <img
+          className={`barcode-preview${loaded ? " media-loaded" : ""}`}
+          src={user.barcode}
+          alt={`${user.name} barcode`}
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+        />
+      )}
+    </span>
   );
 };
 
@@ -125,7 +138,11 @@ const Dashboard = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [summary, setSummary] = useState(emptySummary);
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [hasLoadedDirectory, setHasLoadedDirectory] = useState(false);
+  const [hasLoadedSummary, setHasLoadedSummary] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [modalError, setModalError] = useState("");
   const [userToDelete, setUserToDelete] = useState(null);
@@ -134,6 +151,7 @@ const Dashboard = () => {
   const [newUser, setNewUser] = useState(emptyUser);
 
   const loadSummary = useCallback(async () => {
+    setSummaryLoading(true);
     try {
       setSummary(await apiRequest("/admin/reports/summary"));
     } catch (error) {
@@ -141,6 +159,9 @@ const Dashboard = () => {
         type: "error",
         text: getErrorMessage(error, "Unable to load member totals"),
       });
+    } finally {
+      setSummaryLoading(false);
+      setHasLoadedSummary(true);
     }
   }, []);
 
@@ -160,7 +181,7 @@ const Dashboard = () => {
   useEffect(() => {
     let active = true;
     const fetchUsers = async () => {
-      setLoading(true);
+      setDirectoryLoading(true);
       try {
         const params = new URLSearchParams({
           limit: String(DIRECTORY_PAGE_LIMIT),
@@ -183,7 +204,10 @@ const Dashboard = () => {
           text: getErrorMessage(error, "Unable to load members"),
         });
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setDirectoryLoading(false);
+          setHasLoadedDirectory(true);
+        }
       }
     };
     fetchUsers();
@@ -233,7 +257,7 @@ const Dashboard = () => {
 
   const handleDelete = async () => {
     if (!userToDelete) return;
-    setLoading(true);
+    setActionLoading(true);
     try {
       await apiRequest(`/admin/users/${userToDelete.id}`, { method: "DELETE" });
       setUsers((previous) =>
@@ -248,7 +272,7 @@ const Dashboard = () => {
         text: getErrorMessage(error, "Unable to delete this member"),
       });
     } finally {
-      setLoading(false);
+      setActionLoading(false);
       setUserToDelete(null);
     }
   };
@@ -289,7 +313,7 @@ const Dashboard = () => {
       return;
     }
 
-    setLoading(true);
+    setActionLoading(true);
     setModalError("");
     let createdUser = null;
     try {
@@ -342,7 +366,7 @@ const Dashboard = () => {
         setModalError(getErrorMessage(error, "Unable to save this member."));
       }
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -418,6 +442,8 @@ const Dashboard = () => {
     URL.revokeObjectURL(url);
   };
 
+  const initialPageLoading = !hasLoadedDirectory || !hasLoadedSummary;
+
   return (
     <>
       <Navbar title="Members" />
@@ -431,7 +457,12 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="toolbar">
-            <button type="button" className="btn btn-secondary" onClick={exportUsers}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={exportUsers}
+              disabled={initialPageLoading || directoryLoading}
+            >
               Export current page
             </button>
             <button type="button" className="btn btn-primary" onClick={() => openAddEditModal()}>
@@ -449,35 +480,55 @@ const Dashboard = () => {
           </div>
         )}
 
-        <section className="stat-grid" aria-label="Member summary">
+        <section
+          className="stat-grid"
+          aria-label="Member summary"
+          aria-busy={summaryLoading}
+        >
           <article className="stat-card stat-card--accent">
             <p className="stat-label">Total members</p>
-            <p className="stat-value">{summary.totalMembers}</p>
+            <p className="stat-value">
+              {initialPageLoading ? <span className="skeleton-block skeleton-stat" /> : summary.totalMembers}
+            </p>
             <p className="stat-detail">All managed accounts</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Active</p>
-            <p className="stat-value">{summary.activeMembers}</p>
+            <p className="stat-value">
+              {initialPageLoading ? <span className="skeleton-block skeleton-stat" /> : summary.activeMembers}
+            </p>
             <p className="stat-detail">Current memberships</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Expiring soon</p>
-            <p className="stat-value">{summary.expiringSoon}</p>
+            <p className="stat-value">
+              {initialPageLoading ? <span className="skeleton-block skeleton-stat" /> : summary.expiringSoon}
+            </p>
             <p className="stat-detail">Within 30 days</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Paying members</p>
-            <p className="stat-value">{summary.payingMembers}</p>
+            <p className="stat-value">
+              {initialPageLoading ? <span className="skeleton-block skeleton-stat" /> : summary.payingMembers}
+            </p>
             <p className="stat-detail">With a selected membership</p>
           </article>
         </section>
 
-        <section className="surface-card">
+        <section
+          className={`surface-card directory-card${directoryLoading && !initialPageLoading ? " directory-card--refreshing" : ""}`}
+          aria-label="Member directory"
+          aria-busy={directoryLoading}
+        >
           <div className="surface-card__header">
             <div>
               <h2>Member directory</h2>
               <p>
-                {users.length} shown · {totalCount} {activeSearch ? "matches" : "accounts"}
+                {initialPageLoading ? (
+                  <span className="skeleton-block skeleton-meta" aria-label="Loading members" />
+                ) : (
+                  <>{users.length} shown · {totalCount} {activeSearch ? "matches" : "accounts"}</>
+                )}
               </p>
             </div>
             <input
@@ -490,7 +541,12 @@ const Dashboard = () => {
             />
           </div>
 
-          <div className="data-table-wrap">
+          <div
+            className={`directory-progress${directoryLoading && !initialPageLoading ? " directory-progress--active" : ""}`}
+            aria-hidden="true"
+          />
+
+          <div className="data-table-wrap directory-table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
@@ -505,7 +561,17 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => {
+                {initialPageLoading ? (
+                  Array.from({ length: DIRECTORY_SKELETON_ROWS }, (_, rowIndex) => (
+                    <tr className="skeleton-row" key={`skeleton-${rowIndex}`} aria-hidden="true">
+                      {Array.from({ length: 8 }, (_, cellIndex) => (
+                        <td key={`skeleton-${rowIndex}-${cellIndex}`}>
+                          <span className="skeleton-block skeleton-cell" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : users.map((user) => {
                   const isCurrentAdmin = user.id === currentUser?.uid;
                   const isActive =
                     user.membership !== "none" &&
@@ -560,7 +626,7 @@ const Dashboard = () => {
                 })}
               </tbody>
             </table>
-            {!loading && users.length === 0 && (
+            {!initialPageLoading && !directoryLoading && users.length === 0 && (
               <div className="empty-state">
                 <strong>{activeSearch ? "No matching members" : "No members yet"}</strong>
                 {activeSearch ? "Try a different search term." : "Add your first member to get started."}
@@ -572,18 +638,20 @@ const Dashboard = () => {
               type="button"
               className="btn btn-secondary btn-small"
               onClick={goToPreviousPage}
-              disabled={previousPageTokens.length === 0 || loading}
+              disabled={previousPageTokens.length === 0 || directoryLoading}
             >
               Previous
             </button>
             <span>
-              Page {previousPageTokens.length + 1} · {totalCount} total
+              {initialPageLoading
+                ? "Loading members…"
+                : `Page ${previousPageTokens.length + 1} · ${totalCount} total`}
             </span>
             <button
               type="button"
               className="btn btn-secondary btn-small"
               onClick={goToNextPage}
-              disabled={!nextPageToken || loading}
+              disabled={!nextPageToken || directoryLoading}
             >
               Next
             </button>
@@ -597,7 +665,7 @@ const Dashboard = () => {
           title="Delete member"
           confirmText="Delete permanently"
           destructive
-          busy={loading}
+          busy={actionLoading}
         >
           <p>
             Delete <strong>{userToDelete?.name}</strong> and their associated account data? This action cannot be undone.
@@ -606,11 +674,11 @@ const Dashboard = () => {
 
         <Modal
           isOpen={isAddEditModalOpen}
-          onClose={() => !loading && setIsAddEditModalOpen(false)}
+          onClose={() => !actionLoading && setIsAddEditModalOpen(false)}
           onConfirm={handleAddEditUser}
           title={currentUserId ? "Edit member" : "Add member"}
           confirmText={currentUserId ? "Save changes" : "Add member"}
-          busy={loading}
+          busy={actionLoading}
           wide
         >
           {modalError && <div className="alert alert--error" role="alert">{modalError}</div>}
@@ -676,7 +744,7 @@ const Dashboard = () => {
           </div>
         </Modal>
 
-        {loading && (
+        {actionLoading && (
           <div className="loading-overlay" role="status" aria-live="polite">
             <div className="loading-panel"><span className="spinner" aria-hidden="true" />Working…</div>
           </div>

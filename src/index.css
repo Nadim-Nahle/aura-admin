@@ -30,6 +30,7 @@
 
 html {
   background: var(--bg);
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -435,6 +436,7 @@ a {
 }
 
 .avatar {
+  position: relative;
   display: inline-flex;
   width: 42px;
   height: 42px;
@@ -450,10 +452,23 @@ a {
   font-weight: 850;
 }
 
+.avatar__fallback {
+  position: relative;
+  z-index: 0;
+}
+
 .avatar img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.avatar img.media-loaded {
+  opacity: 1;
 }
 
 .member-cell {
@@ -470,6 +485,23 @@ a {
   border-radius: 6px;
   background: #fff;
   padding: 3px;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.barcode-preview.media-loaded {
+  opacity: 1;
+}
+
+.barcode-shell {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  vertical-align: middle;
+}
+
+.barcode-shell > * {
+  grid-area: 1 / 1;
 }
 
 .image-placeholder {

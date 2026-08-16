@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./client";
+import { apiRequest, apiRequestWithResponse, ApiError } from "./client";
 import { auth } from "../firebase/firebase";
 
 jest.mock("../firebase/firebase", () => ({
@@ -32,6 +32,23 @@ describe("authenticated API client", () => {
     expect(request[1].headers.get("Authorization")).toBe(
       "Bearer firebase-token",
     );
+  });
+
+  it("exposes pagination response headers when requested", async () => {
+    const apiResponse = response(200, [{ id: "member-1" }]);
+    apiResponse.headers.get = jest.fn((name) =>
+      name.toLowerCase() === "content-type"
+        ? "application/json"
+        : name.toLowerCase() === "x-next-page-token"
+          ? "next-token"
+          : null,
+    );
+    global.fetch = jest.fn().mockResolvedValue(apiResponse);
+
+    const result = await apiRequestWithResponse("/admin/users?limit=50");
+
+    expect(result.data).toEqual([{ id: "member-1" }]);
+    expect(result.headers.get("X-Next-Page-Token")).toBe("next-token");
   });
 
   it("keeps the session on a forbidden response", async () => {

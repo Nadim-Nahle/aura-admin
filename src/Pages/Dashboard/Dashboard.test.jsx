@@ -117,6 +117,53 @@ describe("member dashboard", () => {
     );
   });
 
+  it("sends sorting, membership, status, and date filters to the directory API", async () => {
+    apiRequest.mockResolvedValue({
+      totalMembers: 75,
+      activeMembers: 10,
+      payingMembers: 12,
+      expiringSoon: 2,
+    });
+    apiRequestWithResponse.mockResolvedValue({
+      data: [],
+      headers: new Headers({ "X-Total-Count": "0" }),
+    });
+
+    render(<Dashboard />);
+    await waitFor(() => expect(apiRequestWithResponse).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+
+    fireEvent.change(screen.getByLabelText("Sort by"), {
+      target: { value: "name-asc" },
+    });
+    fireEvent.change(screen.getByLabelText("Membership"), {
+      target: { value: "regular" },
+    });
+    fireEvent.change(screen.getByLabelText("Status"), {
+      target: { value: "active" },
+    });
+    fireEvent.change(screen.getByLabelText("From"), {
+      target: { value: "2026-08-01" },
+    });
+
+    await waitFor(() =>
+      expect(apiRequestWithResponse).toHaveBeenLastCalledWith(
+        expect.stringMatching(
+          /sort=name-asc.*membership=regular.*status=active.*dateField=endDate.*dateFrom=2026-08-01/,
+        ),
+      ),
+    );
+    expect(screen.getByLabelText("4 active filters")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() =>
+      expect(apiRequestWithResponse).toHaveBeenLastCalledWith(
+        "/admin/users?limit=50",
+      ),
+    );
+  });
+
   it("requests the next cursor page instead of treating the first page as complete", async () => {
     let resolveNextPage;
     apiRequest.mockResolvedValue({

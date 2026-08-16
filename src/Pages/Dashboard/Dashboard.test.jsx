@@ -1,10 +1,11 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Dashboard from "./Dashboard";
-import { apiRequest } from "../../api/client";
+import { apiRequest, apiRequestWithResponse } from "../../api/client";
 
 jest.mock("../../api/client", () => ({
   apiRequest: jest.fn(),
+  apiRequestWithResponse: jest.fn(),
   getErrorMessage: jest.fn((error, fallback) => fallback || error.message),
   jsonRequest: jest.fn(),
 }));
@@ -14,22 +15,35 @@ jest.mock("../../contexts/authContext", () => ({
 }));
 
 describe("member dashboard", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it("renders members that do not have membership dates", async () => {
-    apiRequest.mockResolvedValue([
-      {
-        id: "member-id",
-        displayName: "Test Member",
-        email: "member@example.com",
-        phoneNumber: "+96170123456",
-        role: "user",
-        membership: "none",
-        privateSessions: "0",
-        startDate: "none",
-        endDate: "none",
-        profilePicture: "none",
-        barcode: "none",
-      },
-    ]);
+    apiRequest.mockResolvedValue({
+      totalMembers: 75,
+      activeMembers: 10,
+      payingMembers: 12,
+      expiringSoon: 2,
+    });
+    apiRequestWithResponse.mockResolvedValue({
+      data: [
+        {
+          id: "member-id",
+          displayName: "Test Member",
+          email: "member@example.com",
+          phoneNumber: "+96170123456",
+          role: "user",
+          membership: "none",
+          privateSessions: "0",
+          startDate: "none",
+          endDate: "none",
+          profilePicture: "none",
+          barcode: "none",
+        },
+      ],
+      headers: new Headers({ "X-Total-Count": "75" }),
+    });
 
     render(<Dashboard />);
 
@@ -37,5 +51,40 @@ describe("member dashboard", () => {
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("to —")).toBeInTheDocument();
     expect(screen.getByText("member@example.com")).toBeInTheDocument();
+    expect(screen.getByLabelText("Member directory pages")).toHaveTextContent(
+      "75 total",
+    );
+  });
+
+  it("requests the next cursor page instead of treating the first page as complete", async () => {
+    apiRequest.mockResolvedValue({
+      totalMembers: 75,
+      activeMembers: 0,
+      payingMembers: 0,
+      expiringSoon: 0,
+    });
+    apiRequestWithResponse
+      .mockResolvedValueOnce({
+        data: [],
+        headers: new Headers({
+          "X-Total-Count": "75",
+          "X-Next-Page-Token": "next-token",
+        }),
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        headers: new Headers({ "X-Total-Count": "75" }),
+      });
+
+    render(<Dashboard />);
+    const nextButton = await screen.findByRole("button", { name: "Next" });
+    await waitFor(() => expect(nextButton).toBeEnabled());
+    fireEvent.click(nextButton);
+
+    await waitFor(() =>
+      expect(apiRequestWithResponse).toHaveBeenCalledWith(
+        expect.stringContaining("pageToken=next-token"),
+      ),
+    );
   });
 });

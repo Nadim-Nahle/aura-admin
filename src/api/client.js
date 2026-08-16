@@ -31,7 +31,7 @@ export const getErrorMessage = (error, fallback = "Something went wrong") => {
     : fallback;
 };
 
-export async function apiRequest(path, options = {}) {
+export async function apiRequestWithResponse(path, options = {}) {
   const user = auth.currentUser;
   if (!user) {
     throw new ApiError("Your session has expired. Please sign in again.", 401);
@@ -75,7 +75,16 @@ export async function apiRequest(path, options = {}) {
     );
   }
 
-  return body;
+  return {
+    data: body,
+    headers: response.headers,
+    status: response.status,
+  };
+}
+
+export async function apiRequest(path, options = {}) {
+  const response = await apiRequestWithResponse(path, options);
+  return response.data;
 }
 
 export function jsonRequest(path, method, body) {

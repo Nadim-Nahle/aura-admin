@@ -1,14 +1,26 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./Dashboard.css";
 import Modal from "../../components/Modal";
 import Navbar from "../../components/Navbar";
-import { apiRequest, getErrorMessage, jsonRequest } from "../../api/client";
+import {
+  apiRequest,
+  apiRequestWithResponse,
+  getErrorMessage,
+  jsonRequest,
+} from "../../api/client";
 import { useAuth } from "../../contexts/authContext";
 
 const MAX_BARCODE_BYTES = 5 * 1024 * 1024;
+const DIRECTORY_PAGE_LIMIT = 50;
 const ALLOWED_BARCODE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const emptySummary = {
+  totalMembers: 0,
+  activeMembers: 0,
+  payingMembers: 0,
+  expiringSoon: 0,
+};
 
 const toCsvCell = (value) => {
   let text = String(value ?? "");
@@ -105,7 +117,14 @@ const BarcodePreview = ({ user }) => {
 const Dashboard = () => {
   const { currentUser } = useAuth();
   const [users, setUsers] = useState([]);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
+  const [pageToken, setPageToken] = useState(null);
+  const [previousPageTokens, setPreviousPageTokens] = useState([]);
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [summary, setSummary] = useState(emptySummary);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [modalError, setModalError] = useState("");
@@ -114,54 +133,79 @@ const Dashboard = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [newUser, setNewUser] = useState(emptyUser);
 
+  const loadSummary = useCallback(async () => {
+    try {
+      setSummary(await apiRequest("/admin/reports/summary"));
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        text: getErrorMessage(error, "Unable to load member totals"),
+      });
+    }
+  }, []);
+
   useEffect(() => {
+    loadSummary();
+  }, [loadSummary, refreshVersion]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setActiveSearch(searchInput.trim());
+      setPageToken(null);
+      setPreviousPageTokens([]);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    let active = true;
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const data = await apiRequest("/admin/users");
+        const params = new URLSearchParams({
+          limit: String(DIRECTORY_PAGE_LIMIT),
+        });
+        if (pageToken) params.set("pageToken", pageToken);
+        if (activeSearch) params.set("search", activeSearch);
+        const result = await apiRequestWithResponse(
+          `/admin/users?${params.toString()}`,
+        );
+        if (!active) return;
+        const data = result.data;
         setUsers(sortUsers(data.map(normalizeUser)));
+        setNextPageToken(result.headers.get("X-Next-Page-Token"));
+        const responseTotal = Number(result.headers.get("X-Total-Count"));
+        setTotalCount(Number.isFinite(responseTotal) ? responseTotal : data.length);
       } catch (error) {
+        if (!active) return;
         setFeedback({
           type: "error",
           text: getErrorMessage(error, "Unable to load members"),
         });
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     fetchUsers();
-  }, []);
-
-  const stats = useMemo(() => {
-    const now = Date.now();
-    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-    const active = users.filter(
-      (user) =>
-        user.membership !== "none" &&
-        Boolean(user.endDate) &&
-        user.endDate.getTime() >= now,
-    ).length;
-    const expiring = users.filter((user) => {
-      const remaining = user.endDate ? user.endDate.getTime() - now : -1;
-      return user.membership !== "none" && remaining >= 0 && remaining <= thirtyDays;
-    }).length;
-    return {
-      total: users.length,
-      active,
-      admins: users.filter((user) => user.role === "admin").length,
-      expiring,
+    return () => {
+      active = false;
     };
-  }, [users]);
+  }, [activeSearch, pageToken, refreshVersion]);
 
-  const filteredUsers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return users;
-    return users.filter((user) =>
-      [user.name, user.email, user.phoneNumber, user.membership, user.role]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(query)),
-    );
-  }, [search, users]);
+  const goToNextPage = () => {
+    if (!nextPageToken) return;
+    setPreviousPageTokens((previous) => [...previous, pageToken]);
+    setPageToken(nextPageToken);
+  };
+
+  const goToPreviousPage = () => {
+    setPreviousPageTokens((previous) => {
+      if (previous.length === 0) return previous;
+      const updated = [...previous];
+      setPageToken(updated.pop() ?? null);
+      return updated;
+    });
+  };
 
   const openAddEditModal = (user = null) => {
     setFeedback(null);
@@ -196,6 +240,7 @@ const Dashboard = () => {
         previous.filter((user) => user.id !== userToDelete.id),
       );
       setFeedback({ type: "success", text: `${userToDelete.name} was deleted.` });
+      setRefreshVersion((version) => version + 1);
       setUserToDelete(null);
     } catch (error) {
       setFeedback({
@@ -282,6 +327,7 @@ const Dashboard = () => {
         type: "success",
         text: currentUserId ? "Member updated successfully." : "Member added successfully.",
       });
+      setRefreshVersion((version) => version + 1);
       setIsAddEditModalOpen(false);
     } catch (error) {
       if (createdUser) {
@@ -291,6 +337,7 @@ const Dashboard = () => {
           type: "error",
           text: `Member created, but the barcode upload failed: ${getErrorMessage(error)}`,
         });
+        setRefreshVersion((version) => version + 1);
       } else {
         setModalError(getErrorMessage(error, "Unable to save this member."));
       }
@@ -385,7 +432,7 @@ const Dashboard = () => {
           </div>
           <div className="toolbar">
             <button type="button" className="btn btn-secondary" onClick={exportUsers}>
-              Export CSV
+              Export current page
             </button>
             <button type="button" className="btn btn-primary" onClick={() => openAddEditModal()}>
               + Add member
@@ -405,23 +452,23 @@ const Dashboard = () => {
         <section className="stat-grid" aria-label="Member summary">
           <article className="stat-card stat-card--accent">
             <p className="stat-label">Total members</p>
-            <p className="stat-value">{stats.total}</p>
+            <p className="stat-value">{summary.totalMembers}</p>
             <p className="stat-detail">All managed accounts</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Active</p>
-            <p className="stat-value">{stats.active}</p>
+            <p className="stat-value">{summary.activeMembers}</p>
             <p className="stat-detail">Current memberships</p>
           </article>
           <article className="stat-card">
             <p className="stat-label">Expiring soon</p>
-            <p className="stat-value">{stats.expiring}</p>
+            <p className="stat-value">{summary.expiringSoon}</p>
             <p className="stat-detail">Within 30 days</p>
           </article>
           <article className="stat-card">
-            <p className="stat-label">Administrators</p>
-            <p className="stat-value">{stats.admins}</p>
-            <p className="stat-detail">Privileged accounts</p>
+            <p className="stat-label">Paying members</p>
+            <p className="stat-value">{summary.payingMembers}</p>
+            <p className="stat-detail">With a selected membership</p>
           </article>
         </section>
 
@@ -429,13 +476,15 @@ const Dashboard = () => {
           <div className="surface-card__header">
             <div>
               <h2>Member directory</h2>
-              <p>{filteredUsers.length} of {users.length} accounts</p>
+              <p>
+                {users.length} shown · {totalCount} {activeSearch ? "matches" : "accounts"}
+              </p>
             </div>
             <input
               className="search-control"
               type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder="Search name, email, phone…"
               aria-label="Search members"
             />
@@ -456,7 +505,7 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => {
+                {users.map((user) => {
                   const isCurrentAdmin = user.id === currentUser?.uid;
                   const isActive =
                     user.membership !== "none" &&
@@ -511,12 +560,33 @@ const Dashboard = () => {
                 })}
               </tbody>
             </table>
-            {!loading && filteredUsers.length === 0 && (
+            {!loading && users.length === 0 && (
               <div className="empty-state">
-                <strong>{users.length ? "No matching members" : "No members yet"}</strong>
-                {users.length ? "Try a different search term." : "Add your first member to get started."}
+                <strong>{activeSearch ? "No matching members" : "No members yet"}</strong>
+                {activeSearch ? "Try a different search term." : "Add your first member to get started."}
               </div>
             )}
+          </div>
+          <div className="pagination-bar" aria-label="Member directory pages">
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={goToPreviousPage}
+              disabled={previousPageTokens.length === 0 || loading}
+            >
+              Previous
+            </button>
+            <span>
+              Page {previousPageTokens.length + 1} · {totalCount} total
+            </span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={goToNextPage}
+              disabled={!nextPageToken || loading}
+            >
+              Next
+            </button>
           </div>
         </section>
 

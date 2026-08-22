@@ -732,8 +732,8 @@ const Dashboard = () => {
                           <div className="table-secondary">No membership dates</div>
                         ) : (
                           <>
-                            <div className="table-primary">{formatDate(user.startDate)}</div>
-                            <div className="table-secondary">to {formatDate(user.endDate)}</div>
+                            <div className="table-primary">{formatDate(user.endDate)}</div>
+                            <div className="table-secondary">from {formatDate(user.startDate)}</div>
                           </>
                         )}
                       </td>

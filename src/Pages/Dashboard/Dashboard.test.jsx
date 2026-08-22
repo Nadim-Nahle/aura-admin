@@ -150,6 +150,41 @@ describe("member dashboard", () => {
     );
   });
 
+  it("highlights the membership end date", async () => {
+    apiRequest.mockResolvedValue({
+      totalMembers: 1,
+      activeMembers: 1,
+      payingMembers: 1,
+      expiringSoon: 0,
+    });
+    apiRequestWithResponse.mockResolvedValue({
+      data: [
+        {
+          id: "dated-member",
+          displayName: "Dated Member",
+          email: "dated@example.com",
+          phoneNumber: "+96170123456",
+          role: "user",
+          membership: "regular",
+          privateSessions: "0",
+          startDate: "2025-10-20T00:00:00.000Z",
+          endDate: "2027-05-20T00:00:00.000Z",
+          profilePicture: "none",
+          barcode: "none",
+        },
+      ],
+      headers: new Headers({ "X-Total-Count": "1" }),
+    });
+
+    render(<Dashboard />);
+
+    expect(await screen.findByText("Dated Member")).toBeInTheDocument();
+    expect(screen.getByText("20/05/2027")).toHaveClass("table-primary");
+    expect(screen.getByText("from 20/10/2025")).toHaveClass(
+      "table-secondary",
+    );
+  });
+
   it("sends sorting, membership, status, and date filters to the directory API", async () => {
     apiRequest.mockResolvedValue({
       totalMembers: 75,

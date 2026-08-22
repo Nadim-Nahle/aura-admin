@@ -37,12 +37,6 @@ const toCsvCell = (value) => {
   return `"${text.replace(/"/g, '""')}"`;
 };
 
-const oneMonthFromNow = () => {
-  const date = new Date();
-  date.setMonth(date.getMonth() + 1);
-  return date;
-};
-
 const emptyUser = () => ({
   name: "",
   email: "",
@@ -51,8 +45,8 @@ const emptyUser = () => ({
   role: "user",
   membership: "none",
   privateSessions: "0",
-  startDate: new Date(),
-  endDate: oneMonthFromNow(),
+  startDate: null,
+  endDate: null,
   barcodeFile: null,
 });
 
@@ -271,8 +265,8 @@ const Dashboard = () => {
         role: user.role || "user",
         membership: user.membership || "none",
         privateSessions: user.privateSessions || "0",
-        startDate: parseDate(user.startDate, new Date()),
-        endDate: parseDate(user.endDate, oneMonthFromNow()),
+        startDate: parseDate(user.startDate, null),
+        endDate: parseDate(user.endDate, null),
         barcodeFile: null,
       });
       setCurrentUserId(user.id);
@@ -327,9 +321,11 @@ const Dashboard = () => {
     if (!currentUserId && newUser.password.length < 8) {
       return "New passwords must contain at least 8 characters.";
     }
-    if (!newUser.startDate || !newUser.endDate) return "Choose both membership dates.";
-    if (newUser.endDate < newUser.startDate) {
-      return "The membership end date must be after the start date.";
+    if (newUser.membership !== "none") {
+      if (!newUser.startDate || !newUser.endDate) return "Choose both membership dates.";
+      if (newUser.endDate < newUser.startDate) {
+        return "The membership end date must be after the start date.";
+      }
     }
     return "";
   };
@@ -352,8 +348,8 @@ const Dashboard = () => {
         role: newUser.role,
         membership: newUser.membership,
         privateSessions: newUser.privateSessions,
-        startDate: newUser.startDate.toISOString(),
-        endDate: newUser.endDate.toISOString(),
+        startDate: newUser.membership === "none" ? "none" : newUser.startDate.toISOString(),
+        endDate: newUser.membership === "none" ? "none" : newUser.endDate.toISOString(),
         ...(!currentUserId ? { password: newUser.password } : {}),
       };
 
@@ -405,6 +401,15 @@ const Dashboard = () => {
       setNewUser((previous) => ({
         ...previous,
         phoneNumber: localNumber ? `+961${localNumber.slice(0, 8)}` : "",
+      }));
+      return;
+    }
+
+    if (name === "membership") {
+      setNewUser((previous) => ({
+        ...previous,
+        membership: value,
+        ...(value === "none" ? { startDate: null, endDate: null } : {}),
       }));
       return;
     }
@@ -724,8 +729,14 @@ const Dashboard = () => {
                         </span>
                       </td>
                       <td>
-                        <div className="table-primary">{formatDate(user.startDate)}</div>
-                        <div className="table-secondary">to {formatDate(user.endDate)}</div>
+                        {user.membership === "none" ? (
+                          <div className="table-secondary">No membership dates</div>
+                        ) : (
+                          <>
+                            <div className="table-primary">{formatDate(user.startDate)}</div>
+                            <div className="table-secondary">to {formatDate(user.endDate)}</div>
+                          </>
+                        )}
                       </td>
                       <td>{user.privateSessions === "0" || user.privateSessions === "none" ? "None" : user.privateSessions}</td>
                       <td><BarcodePreview user={user} /></td>
@@ -830,11 +841,11 @@ const Dashboard = () => {
             </div>
             <div className="field">
               <label htmlFor="member-start">Start date</label>
-              <DatePicker id="member-start" selected={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, startDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" />
+              <DatePicker id="member-start" selected={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, startDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" disabled={newUser.membership === "none"} />
             </div>
             <div className="field">
               <label htmlFor="member-end">End date</label>
-              <DatePicker id="member-end" selected={newUser.endDate} minDate={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, endDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" />
+              <DatePicker id="member-end" selected={newUser.endDate} minDate={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, endDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" disabled={newUser.membership === "none"} />
             </div>
             <div className="field">
               <label htmlFor="member-role">Role</label>

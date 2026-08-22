@@ -163,7 +163,11 @@ describe("member dashboard", () => {
     });
 
     render(<Dashboard />);
-    await waitFor(() => expect(apiRequestWithResponse).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(apiRequestWithResponse).toHaveBeenLastCalledWith(
+        "/admin/users?limit=50&sort=end-newest",
+      ),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Filters" }));
 
     fireEvent.change(screen.getByLabelText("Sort by"), {
@@ -192,7 +196,7 @@ describe("member dashboard", () => {
 
     await waitFor(() =>
       expect(apiRequestWithResponse).toHaveBeenLastCalledWith(
-        "/admin/users?limit=50",
+        "/admin/users?limit=50&sort=end-newest",
       ),
     );
   });

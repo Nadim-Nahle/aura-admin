@@ -1,7 +1,7 @@
 import React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Dashboard from "./Dashboard";
-import { apiRequest, apiRequestWithResponse } from "../../api/client";
+import { apiRequest, apiRequestWithResponse, jsonRequest } from "../../api/client";
 
 jest.mock("../../api/client", () => ({
   apiRequest: jest.fn(),
@@ -105,15 +105,48 @@ describe("member dashboard", () => {
       ],
       headers: new Headers({ "X-Total-Count": "75" }),
     });
+    jsonRequest.mockResolvedValue({
+      user: {
+        id: "member-id",
+        displayName: "Test Member",
+        email: "member@example.com",
+        phoneNumber: "+96170123456",
+        role: "user",
+        membership: "none",
+        privateSessions: "0",
+        startDate: "none",
+        endDate: "none",
+        profilePicture: "none",
+        barcode: "none",
+      },
+    });
 
     render(<Dashboard />);
 
     expect(await screen.findByText("Test Member")).toBeInTheDocument();
-    expect(screen.getByText("—")).toBeInTheDocument();
-    expect(screen.getByText("to —")).toBeInTheDocument();
+    expect(screen.getByText("No membership dates")).toBeInTheDocument();
     expect(screen.getByText("member@example.com")).toBeInTheDocument();
     expect(screen.getByLabelText("Member directory pages")).toHaveTextContent(
       "75 total",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByLabelText("Start date")).toBeDisabled();
+    expect(screen.getByLabelText("End date")).toBeDisabled();
+    expect(screen.getByLabelText("Start date")).toHaveValue("");
+    expect(screen.getByLabelText("End date")).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(jsonRequest).toHaveBeenCalledWith(
+        "/admin/users/member-id",
+        "PUT",
+        expect.objectContaining({
+          membership: "none",
+          startDate: "none",
+          endDate: "none",
+        }),
+      ),
     );
   });
 

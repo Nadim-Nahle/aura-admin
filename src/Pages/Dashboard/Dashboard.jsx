@@ -17,7 +17,7 @@ const DIRECTORY_PAGE_LIMIT = 50;
 const DIRECTORY_SKELETON_ROWS = 8;
 const ALLOWED_BARCODE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const createDefaultFilters = () => ({
-  sort: "",
+  sort: "end-newest",
   membership: "",
   status: "",
   dateField: "endDate",
@@ -475,7 +475,7 @@ const Dashboard = () => {
 
   const initialPageLoading = !hasLoadedDirectory || !hasLoadedSummary;
   const activeFilterCount =
-    Number(Boolean(filters.sort)) +
+    Number(filters.sort !== "end-newest") +
     Number(Boolean(filters.membership)) +
     Number(Boolean(filters.status)) +
     Number(Boolean(filters.dateFrom || filters.dateTo));
@@ -599,12 +599,11 @@ const Dashboard = () => {
               <label className="filter-control">
                 <span>Sort by</span>
                 <select name="sort" value={filters.sort} onChange={handleFilterChange}>
-                  <option value="">Default order</option>
+                  <option value="end-newest">End date: newest (default)</option>
                   <option value="name-asc">Name A–Z</option>
                   <option value="name-desc">Name Z–A</option>
                   <option value="start-newest">Start date: newest</option>
                   <option value="start-oldest">Start date: oldest</option>
-                  <option value="end-newest">End date: newest</option>
                   <option value="end-oldest">End date: oldest</option>
                 </select>
               </label>

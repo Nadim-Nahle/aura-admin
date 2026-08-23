@@ -1,0 +1,12 @@
+title = "GrowFitness admin secret scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Firebase client configuration is public by design and is not authorization"
+targetRules = ["gcp-api-key", "generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^AIzaSyAq4rHeYjdnUpZj-Buo8MhwvSZHX7-efUs$''']
+paths = ['''^src/firebase/firebase\.js$''']

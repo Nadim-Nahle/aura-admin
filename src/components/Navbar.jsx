@@ -10,6 +10,7 @@ const navigation = [
   { to: "/packages", label: "Packages" },
   { to: "/classes", label: "Classes" },
   { to: "/report", label: "Reports" },
+  { to: "/notifications", label: "Notifications" },
 ];
 
 const initialsFor = (value = "Admin") =>

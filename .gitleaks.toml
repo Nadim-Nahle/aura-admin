@@ -10,3 +10,11 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^AIzaSyAq4rHeYjdnUpZj-Buo8MhwvSZHX7-efUs$''']
 paths = ['''^src/firebase/firebase\.js$''']
+
+[[allowlists]]
+description = "The reCAPTCHA Enterprise site key is a public browser identifier"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^6LfbcJQtAAAAAOXK78o6yC-7sM6VW24W9azzCIDj$''']
+paths = ['''^\.env\.production$''']

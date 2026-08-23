@@ -80,13 +80,33 @@ describe("authenticated API client", () => {
     expect(auth.signOut).not.toHaveBeenCalled();
   });
 
-  it("ends the session on an unauthorized response", async () => {
+  it("ends the session when the Firebase ID token is rejected", async () => {
     global.fetch = jest
       .fn()
-      .mockResolvedValue(response(401, { message: "Token expired" }));
+      .mockResolvedValue(
+        response(401, {
+          message: "The Firebase ID token is invalid, expired, or revoked",
+        }),
+      );
 
     await expect(apiRequest("/admin/users")).rejects.toBeInstanceOf(ApiError);
     expect(auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the session when App Check rejects a request", async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        response(401, { message: "A valid App Check token is required" }),
+      );
+
+    await expect(apiRequest("/admin/users")).rejects.toEqual(
+      expect.objectContaining({
+        status: 401,
+        message: "A valid App Check token is required",
+      }),
+    );
+    expect(auth.signOut).not.toHaveBeenCalled();
   });
 
   it("returns a clear message when the API cannot be reached", async () => {

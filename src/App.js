@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/authContext";
 import ProtectedRoute from "./contexts/ProtectedRoute";
 import ReportPage from "./Pages/Report/ReportPage";
 import ClassPage from "./Pages/classes/ClassPage";
+import NotificationPage from "./Pages/Notifications/NotificationPage";
 
 const App = () => {
   return (
@@ -30,6 +31,10 @@ const App = () => {
         <Route
           path="/report"
           element={<ProtectedRoute element={<ReportPage />} />}
+        />
+        <Route
+          path="/notifications"
+          element={<ProtectedRoute element={<NotificationPage />} />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -61,7 +61,7 @@ const NotificationPage = () => {
             <p className="page-eyebrow">Member communication</p>
             <h1 className="page-title">Send a notification</h1>
             <p className="page-subtitle">
-              Compose a push notification for every registered Android device.
+              Compose a push notification for every registered Android and iOS device.
             </p>
           </div>
         </header>
@@ -79,7 +79,7 @@ const NotificationPage = () => {
               <h2>Android broadcast</h2>
               <p>The notification is sent immediately after confirmation.</p>
             </div>
-            <span className="badge badge--active">All Android users</span>
+            <span className="badge badge--active">All mobile users</span>
           </div>
 
           <form className="notification-form" onSubmit={prepareSend}>
@@ -123,7 +123,7 @@ const NotificationPage = () => {
           confirmText="Send now"
           busy={sending}
         >
-          <p className="notification-confirm-copy">This will be sent to all registered Android devices.</p>
+          <p className="notification-confirm-copy">This will be sent to all registered Android and iOS devices.</p>
           <div className="notification-preview">
             <strong>{title.trim()}</strong>
             <p>{message.trim()}</p>

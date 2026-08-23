@@ -1,5 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
+import {
+  initializeAppCheck,
+  ReCaptchaEnterpriseProvider,
+} from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAq4rHeYjdnUpZj-Buo8MhwvSZHX7-efUs",
@@ -14,6 +18,14 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const appCheckSiteKey =
+  process.env.REACT_APP_RECAPTCHA_ENTERPRISE_SITE_KEY?.trim();
+const appCheck = appCheckSiteKey
+  ? initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+  : null;
 
 if (process.env.REACT_APP_USE_FIREBASE_EMULATORS === "true") {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", {
@@ -21,4 +33,4 @@ if (process.env.REACT_APP_USE_FIREBASE_EMULATORS === "true") {
   });
 }
 
-export { app, auth };
+export { app, appCheck, auth };

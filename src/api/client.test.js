@@ -1,11 +1,16 @@
 import { apiRequest, apiRequestWithResponse, ApiError } from "./client";
 import { auth } from "../firebase/firebase";
+import { getAppCheckHeader } from "../firebase/appCheck";
 
 jest.mock("../firebase/firebase", () => ({
   auth: {
     currentUser: { getIdToken: jest.fn() },
     signOut: jest.fn(),
   },
+}));
+
+jest.mock("../firebase/appCheck", () => ({
+  getAppCheckHeader: jest.fn(),
 }));
 
 describe("authenticated API client", () => {
@@ -21,6 +26,19 @@ describe("authenticated API client", () => {
     jest.clearAllMocks();
     auth.currentUser.getIdToken.mockResolvedValue("firebase-token");
     auth.signOut.mockResolvedValue(undefined);
+    getAppCheckHeader.mockResolvedValue(null);
+  });
+
+  it("sends an App Check token when protection is configured", async () => {
+    getAppCheckHeader.mockResolvedValue("app-check-token");
+    global.fetch = jest.fn().mockResolvedValue(response(200, { ok: true }));
+
+    await apiRequest("/admin/users");
+
+    const request = global.fetch.mock.calls[0];
+    expect(request[1].headers.get("X-Firebase-AppCheck")).toBe(
+      "app-check-token",
+    );
   });
 
   it("sends the current Firebase ID token", async () => {

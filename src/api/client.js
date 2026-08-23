@@ -1,4 +1,5 @@
 import { auth } from "../firebase/firebase";
+import { getAppCheckHeader } from "../firebase/appCheck";
 
 export const API_BASE_URL = (
   process.env.REACT_APP_API_BASE_URL ||
@@ -40,6 +41,10 @@ export async function apiRequestWithResponse(path, options = {}) {
   const token = await user.getIdToken();
   const headers = new Headers(options.headers || {});
   headers.set("Authorization", `Bearer ${token}`);
+  const appCheckToken = await getAppCheckHeader();
+  if (appCheckToken) {
+    headers.set("X-Firebase-AppCheck", appCheckToken);
+  }
 
   const isFormData = options.body instanceof FormData;
   if (options.body && !isFormData && !headers.has("Content-Type")) {

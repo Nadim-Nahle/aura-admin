@@ -23,6 +23,12 @@ const extractMessage = (body, fallback) => {
   return typeof message === "string" && message.trim() ? message : fallback;
 };
 
+const isFirebaseAuthenticationFailure = (status, body) => {
+  if (status !== 401) return false;
+  const message = extractMessage(body, "").toLowerCase();
+  return message.includes("firebase id token");
+};
+
 export const getErrorMessage = (error, fallback = "Something went wrong") => {
   if (error instanceof ApiError) {
     return error.message;
@@ -70,7 +76,7 @@ export async function apiRequestWithResponse(path, options = {}) {
     : await response.text();
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (isFirebaseAuthenticationFailure(response.status, body)) {
       await auth.signOut().catch(() => undefined);
     }
     throw new ApiError(

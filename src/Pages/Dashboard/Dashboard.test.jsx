@@ -124,6 +124,12 @@ describe("member dashboard", () => {
     render(<Dashboard />);
 
     expect(await screen.findByText("Test Member")).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Email" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "Private" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("No membership dates")).toBeInTheDocument();
     expect(screen.getByText("member@example.com")).toBeInTheDocument();
     expect(screen.getByLabelText("Member directory pages")).toHaveTextContent(

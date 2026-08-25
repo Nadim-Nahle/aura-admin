@@ -866,29 +866,33 @@ const Dashboard = () => {
               <label htmlFor="member-phone">Phone number</label>
               <input id="member-phone" name="phoneNumber" value={newUser.phoneNumber} onChange={handleInputChange} inputMode="tel" placeholder="+961 70 123 456" />
             </div>
-            <div className="field">
-              <label htmlFor="member-membership">Membership</label>
-              <select name="membership" id="member-membership" value={newUser.membership} onChange={handleInputChange}>
-                <option value="none">None</option>
-                <option value="regular">Regular</option>
-                <option value="student">Student</option>
-              </select>
+            <div className="field-pair">
+              <div className="field">
+                <label htmlFor="member-role">Role</label>
+                <select name="role" id="member-role" value={newUser.role} onChange={handleInputChange} disabled={currentUserId === currentUser?.uid}>
+                  <option value="user">Member</option>
+                  <option value="admin">Administrator</option>
+                </select>
+                {currentUserId === currentUser?.uid && <p className="field-hint">You cannot remove your own admin role.</p>}
+              </div>
+              <div className="field">
+                <label htmlFor="member-membership">Membership</label>
+                <select name="membership" id="member-membership" value={newUser.membership} onChange={handleInputChange}>
+                  <option value="none">None</option>
+                  <option value="regular">Regular</option>
+                  <option value="student">Student</option>
+                </select>
+              </div>
             </div>
-            <div className="field">
-              <label htmlFor="member-start">Start date</label>
-              <DatePicker id="member-start" selected={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, startDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" disabled={newUser.membership === "none"} />
-            </div>
-            <div className="field">
-              <label htmlFor="member-end">End date</label>
-              <DatePicker id="member-end" selected={newUser.endDate} minDate={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, endDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" disabled={newUser.membership === "none"} />
-            </div>
-            <div className="field">
-              <label htmlFor="member-role">Role</label>
-              <select name="role" id="member-role" value={newUser.role} onChange={handleInputChange} disabled={currentUserId === currentUser?.uid}>
-                <option value="user">Member</option>
-                <option value="admin">Administrator</option>
-              </select>
-              {currentUserId === currentUser?.uid && <p className="field-hint">You cannot remove your own admin role.</p>}
+            <div className="field-pair">
+              <div className="field">
+                <label htmlFor="member-start">Start date</label>
+                <DatePicker id="member-start" selected={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, startDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" disabled={newUser.membership === "none"} />
+              </div>
+              <div className="field">
+                <label htmlFor="member-end">End date</label>
+                <DatePicker id="member-end" selected={newUser.endDate} minDate={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, endDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" disabled={newUser.membership === "none"} />
+              </div>
             </div>
             <div className="field">
               <label htmlFor="member-private">Private sessions</label>

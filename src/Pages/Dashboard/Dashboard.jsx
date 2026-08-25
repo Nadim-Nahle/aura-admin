@@ -683,7 +683,7 @@ const Dashboard = () => {
                   <th>Role</th>
                   <th>Membership</th>
                   <th>Period</th>
-                  <th>Private</th>
+                  <th>Email</th>
                   <th>QR code</th>
                   <th>Actions</th>
                 </tr>
@@ -712,7 +712,6 @@ const Dashboard = () => {
                           <MemberAvatar user={user} />
                           <div>
                             <div className="table-primary">{user.name || "Unnamed member"}</div>
-                            <div className="table-secondary">{user.email}</div>
                           </div>
                         </div>
                       </td>
@@ -737,7 +736,7 @@ const Dashboard = () => {
                           </>
                         )}
                       </td>
-                      <td>{user.privateSessions === "0" || user.privateSessions === "none" ? "None" : user.privateSessions}</td>
+                      <td>{user.email || "—"}</td>
                       <td><BarcodePreview user={user} /></td>
                       <td>
                         <div className="table-actions">

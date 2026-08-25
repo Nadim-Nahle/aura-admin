@@ -208,8 +208,11 @@ describe("member dashboard", () => {
     fireEvent.click(screen.getByRole("button", { name: /add member/i }));
 
     const membership = screen.getByLabelText("Membership");
+    const role = screen.getByLabelText("Role");
     const startDate = screen.getByLabelText("Start date");
     const endDate = screen.getByLabelText("End date");
+    expect(role.closest(".field-pair")).toBe(membership.closest(".field-pair"));
+    expect(startDate.closest(".field-pair")).toBe(endDate.closest(".field-pair"));
     expect(
       membership.compareDocumentPosition(startDate) &
         Node.DOCUMENT_POSITION_FOLLOWING,

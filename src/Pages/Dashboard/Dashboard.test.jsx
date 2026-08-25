@@ -191,6 +191,55 @@ describe("member dashboard", () => {
     );
   });
 
+  it("places membership before its dates and defaults new periods to one month", async () => {
+    apiRequest.mockResolvedValue({
+      totalMembers: 0,
+      activeMembers: 0,
+      payingMembers: 0,
+      expiringSoon: 0,
+    });
+    apiRequestWithResponse.mockResolvedValue({
+      data: [],
+      headers: new Headers({ "X-Total-Count": "0" }),
+    });
+
+    render(<Dashboard />);
+    await screen.findByText("No members yet");
+    fireEvent.click(screen.getByRole("button", { name: /add member/i }));
+
+    const membership = screen.getByLabelText("Membership");
+    const startDate = screen.getByLabelText("Start date");
+    const endDate = screen.getByLabelText("End date");
+    expect(
+      membership.compareDocumentPosition(startDate) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    const today = new Date();
+    fireEvent.change(membership, { target: { value: "regular" } });
+
+    const targetMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const lastDay = new Date(
+      targetMonth.getFullYear(),
+      targetMonth.getMonth() + 1,
+      0,
+    ).getDate();
+    const expectedEndDate = new Date(
+      targetMonth.getFullYear(),
+      targetMonth.getMonth(),
+      Math.min(today.getDate(), lastDay),
+    );
+    const formatPickerDate = (date) =>
+      [date.getDate(), date.getMonth() + 1, date.getFullYear()]
+        .map((part, index) =>
+          index < 2 ? String(part).padStart(2, "0") : String(part),
+        )
+        .join("/");
+
+    expect(startDate).toHaveValue(formatPickerDate(today));
+    expect(endDate).toHaveValue(formatPickerDate(expectedEndDate));
+  });
+
   it("sends sorting, membership, status, and date filters to the directory API", async () => {
     apiRequest.mockResolvedValue({
       totalMembers: 75,

@@ -56,6 +56,31 @@ const parseDate = (value, fallback) => {
   return Number.isNaN(date.getTime()) ? fallback : date;
 };
 
+const getDefaultMembershipDates = (today = new Date()) => {
+  const startDate = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const targetMonth = new Date(
+    startDate.getFullYear(),
+    startDate.getMonth() + 1,
+    1,
+  );
+  const lastDayOfTargetMonth = new Date(
+    targetMonth.getFullYear(),
+    targetMonth.getMonth() + 1,
+    0,
+  ).getDate();
+  const endDate = new Date(
+    targetMonth.getFullYear(),
+    targetMonth.getMonth(),
+    Math.min(startDate.getDate(), lastDayOfTargetMonth),
+  );
+
+  return { startDate, endDate };
+};
+
 const normalizeUser = (user) => ({
   ...user,
   name: user.displayName || user.name || "",
@@ -406,10 +431,14 @@ const Dashboard = () => {
     }
 
     if (name === "membership") {
+      const membershipDates =
+        value === "none"
+          ? { startDate: null, endDate: null }
+          : getDefaultMembershipDates();
       setNewUser((previous) => ({
         ...previous,
         membership: value,
-        ...(value === "none" ? { startDate: null, endDate: null } : {}),
+        ...membershipDates,
       }));
       return;
     }
@@ -838,6 +867,14 @@ const Dashboard = () => {
               <input id="member-phone" name="phoneNumber" value={newUser.phoneNumber} onChange={handleInputChange} inputMode="tel" placeholder="+961 70 123 456" />
             </div>
             <div className="field">
+              <label htmlFor="member-membership">Membership</label>
+              <select name="membership" id="member-membership" value={newUser.membership} onChange={handleInputChange}>
+                <option value="none">None</option>
+                <option value="regular">Regular</option>
+                <option value="student">Student</option>
+              </select>
+            </div>
+            <div className="field">
               <label htmlFor="member-start">Start date</label>
               <DatePicker id="member-start" selected={newUser.startDate} onChange={(date) => setNewUser((previous) => ({ ...previous, startDate: date }))} dateFormat="dd/MM/yyyy" className="datepicker-input" disabled={newUser.membership === "none"} />
             </div>
@@ -852,14 +889,6 @@ const Dashboard = () => {
                 <option value="admin">Administrator</option>
               </select>
               {currentUserId === currentUser?.uid && <p className="field-hint">You cannot remove your own admin role.</p>}
-            </div>
-            <div className="field">
-              <label htmlFor="member-membership">Membership</label>
-              <select name="membership" id="member-membership" value={newUser.membership} onChange={handleInputChange}>
-                <option value="none">None</option>
-                <option value="regular">Regular</option>
-                <option value="student">Student</option>
-              </select>
             </div>
             <div className="field">
               <label htmlFor="member-private">Private sessions</label>
